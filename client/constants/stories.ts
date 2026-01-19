@@ -2,6 +2,7 @@ export interface Story {
   id: string;
   title: string;
   description: string;
+  context: string;
   image: any;
   macroBeats: string[];
 }
@@ -11,6 +12,7 @@ export const STORIES: Story[] = [
     id: "snow-white",
     title: "Snow White",
     description: "A princess, seven dwarfs, and a magical adventure",
+    context: "In a faraway kingdom, there lived a beautiful princess named Snow White with skin as white as snow, lips as red as roses, and hair as black as ebony. Her stepmother, the Queen, was the most vain woman in all the land and owned a magic mirror that always told the truth.",
     image: require("../../attached_assets/generated_images/snow_white_story_card.png"),
     macroBeats: [
       "Snow White lives with her stepmother the Queen, who is jealous of her beauty",
@@ -27,6 +29,7 @@ export const STORIES: Story[] = [
     id: "rapunzel",
     title: "Rapunzel",
     description: "A girl with magical hair in a tall tower",
+    context: "Long ago, a couple longed for a child. When a baby girl was finally born, an enchantress took her away and locked her in a tall tower deep in the forest. The girl was named Rapunzel, and she had the most beautiful, magical golden hair that grew longer and longer with each passing year.",
     image: require("../../attached_assets/generated_images/rapunzel_story_card.png"),
     macroBeats: [
       "A baby named Rapunzel is taken by an enchantress and locked in a tall tower",
@@ -43,6 +46,7 @@ export const STORIES: Story[] = [
     id: "peter-pan",
     title: "Peter Pan",
     description: "Fly to Neverland with the boy who never grows up",
+    context: "In London, the Darling children—Wendy, John, and Michael—were tucked into their nursery beds. Little did they know that a magical boy named Peter Pan, who never grows up, was about to fly through their window and invite them on the adventure of a lifetime to a place called Neverland.",
     image: require("../../attached_assets/generated_images/peter_pan_story_card.png"),
     macroBeats: [
       "Peter Pan visits the Darling children and invites them to Neverland",
