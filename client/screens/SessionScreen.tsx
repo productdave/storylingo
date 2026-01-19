@@ -105,6 +105,7 @@ export default function SessionScreen() {
       setStatus("connecting");
 
       // Step 1: Get ephemeral token from our backend
+      // Pass story variables that will be injected into the OpenAI prompt template
       const baseUrl = getApiUrl();
       const tokenUrl = new URL("/api/token", baseUrl);
       const response = await fetch(tokenUrl.toString(), {
@@ -113,6 +114,7 @@ export default function SessionScreen() {
         body: JSON.stringify({
           storyId: story.id,
           storyTitle: story.title,
+          storyContext: story.context,
           macroBeats: story.macroBeats,
         }),
       });
