@@ -62,13 +62,13 @@ IMPORTANT: Start immediately with "Hi, I'm Story Buddy! I'm so excited to tell y
                 input: {
                   turn_detection: {
                     type: "server_vad",
-                    threshold: 0.5,
-                    prefix_padding_ms: 300,
-                    silence_duration_ms: 500,
+                    threshold: 0.4,
+                    prefix_padding_ms: 500,
+                    silence_duration_ms: 1000,
                   },
                 },
                 output: {
-                  voice: "alloy",
+                  voice: "shimmer",
                 },
               },
             },
