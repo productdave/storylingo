@@ -50,10 +50,12 @@ export default function SessionScreen() {
   const [status, setStatus] = useState<SessionStatus>("idle");
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
   const pcRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const dataChannelRef = useRef<any>(null);
 
   const talkButtonScale = useSharedValue(1);
   const pulseScale = useSharedValue(1);
@@ -151,6 +153,7 @@ export default function SessionScreen() {
 
       // Create data channel for events BEFORE creating SDP offer
       const dc = pc.createDataChannel("oai-events");
+      dataChannelRef.current = dc;
       dc.onopen = () => {
         console.log("Data channel opened");
         
@@ -288,16 +291,48 @@ export default function SessionScreen() {
     setStatus("idle");
   }, []);
 
+  const sendMessageToAI = (message: string) => {
+    const dc = dataChannelRef.current;
+    if (dc && dc.readyState === "open") {
+      const createItemEvent = {
+        type: "conversation.item.create",
+        item: {
+          type: "message",
+          role: "user",
+          content: [
+            {
+              type: "input_text",
+              text: message,
+            },
+          ],
+        },
+      };
+      dc.send(JSON.stringify(createItemEvent));
+      console.log("Sent message to AI:", message);
+      
+      const responseEvent = {
+        type: "response.create",
+      };
+      dc.send(JSON.stringify(responseEvent));
+    }
+  };
+
   const handleTalkPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    // Talk button now acts as mute/unmute toggle
-    if (isSessionActive && localStreamRef.current) {
-      const audioTracks = localStreamRef.current.getAudioTracks();
-      audioTracks.forEach(track => {
-        track.enabled = isMuted; // Toggle: if muted, enable; if not muted, disable
-      });
-      setIsMuted(!isMuted);
+    // Talk button now acts as pause/resume toggle
+    if (isSessionActive) {
+      if (isPaused) {
+        // Resume the story
+        sendMessageToAI("The child is ready to continue. Please resume the story where we left off.");
+        setIsPaused(false);
+        startPulseAnimation();
+      } else {
+        // Pause the story
+        sendMessageToAI("The child needs to pause. Please acknowledge the pause and wait for them to return.");
+        setIsPaused(true);
+        stopPulseAnimation();
+      }
     }
   };
 
@@ -309,28 +344,14 @@ export default function SessionScreen() {
     talkButtonScale.value = withSpring(1, { damping: 15 });
   };
 
-  const handleStop = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
-    // On web, use confirm dialog; on native, use Alert
-    if (Platform.OS === "web") {
-      const confirmed = window.confirm("End Story? Are you sure you want to stop the story?");
-      if (confirmed) {
-        stopSession();
-        navigation.goBack();
-      }
-    } else {
-      Alert.alert("End Story?", "Are you sure you want to stop the story?", [
-        { text: "Keep Going", style: "cancel" },
-        {
-          text: "Stop",
-          style: "destructive",
-          onPress: () => {
-            stopSession();
-            navigation.goBack();
-          },
-        },
-      ]);
+  const handleMute = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (localStreamRef.current) {
+      const audioTracks = localStreamRef.current.getAudioTracks();
+      audioTracks.forEach(track => {
+        track.enabled = isMuted; // Toggle: if muted, enable; if not muted, disable
+      });
+      setIsMuted(!isMuted);
     }
   };
 
@@ -355,6 +376,8 @@ export default function SessionScreen() {
     setIsSessionActive(false);
     setStatus("idle");
     setIsMuted(false);
+    setIsPaused(false);
+    dataChannelRef.current = null;
     stopPulseAnimation();
   };
 
@@ -365,6 +388,10 @@ export default function SessionScreen() {
   };
 
   const getStatusText = () => {
+    // Show paused status when paused
+    if (isPaused && isSessionActive) {
+      return "Paused";
+    }
     // Show muted status when muted
     if (isMuted && isSessionActive) {
       return "Muted";
@@ -385,8 +412,8 @@ export default function SessionScreen() {
   };
 
   const getTalkButtonColor = () => {
-    // Show muted color when muted
-    if (isMuted && isSessionActive) {
+    // Show paused color when paused
+    if (isPaused && isSessionActive) {
       return ["#888888", "#AAAAAA"];
     }
     
@@ -405,13 +432,14 @@ export default function SessionScreen() {
   };
   
   const getTalkButtonIcon = () => {
-    if (isMuted && isSessionActive) {
-      return "mic-off";
+    // Show pause/play icon based on state
+    if (isPaused && isSessionActive) {
+      return "play";
     }
     if (status === "speaking") {
       return "volume-2";
     }
-    return "mic";
+    return "pause";
   };
 
   return (
@@ -471,15 +499,20 @@ export default function SessionScreen() {
           </Pressable>
 
           <Pressable
-            style={[styles.controlButton, styles.stopButton]}
-            onPress={handleStop}
-            testID="button-stop"
+            style={[styles.controlButton, isMuted ? styles.muteButtonActive : null]}
+            onPress={handleMute}
+            testID="button-mute"
+            disabled={!isSessionActive}
           >
-            <Feather name="square" size={20} color={StoryBuddyColors.error} />
+            <Feather
+              name={isMuted ? "mic-off" : "mic"}
+              size={20}
+              color={isMuted ? StoryBuddyColors.error : StoryBuddyColors.textSecondary}
+            />
             <ThemedText
-              style={[styles.controlButtonText, { color: StoryBuddyColors.error }]}
+              style={[styles.controlButtonText, isMuted ? { color: StoryBuddyColors.error } : null]}
             >
-              Stop
+              {isMuted ? "Unmute" : "Mute"}
             </ThemedText>
           </Pressable>
         </View>
@@ -547,8 +580,9 @@ const styles = StyleSheet.create({
     borderColor: StoryBuddyColors.border,
     backgroundColor: "rgba(255, 255, 255, 0.8)",
   },
-  stopButton: {
+  muteButtonActive: {
     borderColor: StoryBuddyColors.error,
+    backgroundColor: "rgba(255, 107, 157, 0.1)",
   },
   controlButtonText: {
     fontSize: 14,
