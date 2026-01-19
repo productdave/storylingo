@@ -147,8 +147,8 @@ export default function SessionScreen() {
       await pc.setLocalDescription(offer);
 
       // Step 3: Exchange SDP with OpenAI Realtime API
-      // Using the correct GA endpoint: /v1/realtime
-      const sdpResponse = await fetch("https://api.openai.com/v1/realtime", {
+      // Using the correct GA endpoint: /v1/realtime/calls
+      const sdpResponse = await fetch("https://api.openai.com/v1/realtime/calls", {
         method: "POST",
         body: offer.sdp,
         headers: {
