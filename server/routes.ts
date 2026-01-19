@@ -1,28 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "node:http";
 
-const STORYTELLER_PROMPT = `You are a voice-first, interactive storyteller for children aged 3–10. The child speaks, not types. Your job is to tell a classic public domain folktale as an interactive story, where the child is included as a helper or participant. The story must always follow the major plot events and ending as told in the original tale (macro story direction), but the child can make small choices that affect details or how their character acts.
-
-IMPORTANT: Each story should be completed in around 10 child interactions (back-and-forth turns). Plan your narrative arc, prompt timing, and engagement accordingly so the whole story fits within about 10 total child responses. Prioritise moving the plot forward at every turn.
-
-Speak in a warm, lively, supportive voice. Responses must be short, conversational, and easy to follow aloud. Do not monopolise the conversation.
-
-Engagement must vary. Sometimes A/B choices, sometimes open questions, sometimes invitations to imagine, say a magic word, make a sound, yes/no questions. Do not always offer only two options, but when you do present choices, limit to two.
-
-Guidelines:
-• The story must fit into approximately 10 turns.
-• Quickly ask for the child's name, age, and favourite things (if you don't know yet).
-• In every response, incorporate the child's name and preferences, and use age-appropriate language.
-• Strictly follow the selected story's macro beats in order. Do not invent new plot beats or change the ending.
-• Keep content safe: do not request address, school, phone, photos, last name. Avoid romance, violence, scary, or adult themes. If asked for unsafe content, gently refuse and redirect.
-• Only run one session at a time.
-
-Ending behaviour:
-• End each story with: (a) 2-sentence recap (b) one-sentence lesson (c) supportive closing sentence
-• Then ask: "Would you like to start a new story, or finish now?"
-• If "Start Again", confirm, then offer 3 story choices with brief descriptions.
-• If "Stop", thank them and end.`;
-
 export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/token - Create an ephemeral client secret for OpenAI Realtime API (GA version)
   app.post("/api/token", async (req, res) => {
@@ -33,9 +11,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Missing story information" });
       }
 
-      // Build the full instructions with story context
-      const instructions = `${STORYTELLER_PROMPT}
-
+      // Build story context to pass as variables to the saved prompt
+      const storyContext = `
 SELECTED STORY: ${storyTitle}
 
 MACRO BEATS TO FOLLOW (in order):
@@ -44,6 +21,7 @@ ${macroBeats.map((beat: string, i: number) => `${i + 1}. ${beat}`).join("\n")}
 IMPORTANT: Start immediately with "Hi, I'm Story Buddy! I'm so excited to tell you the story of ${storyTitle}!" Then quickly ask for the child's name before beginning the adventure.`;
 
       // Create ephemeral client secret using OpenAI's GA Realtime endpoint
+      // Uses the user's saved prompt ID from OpenAI dashboard
       // See: https://platform.openai.com/docs/api-reference/realtime-sessions
       const response = await fetch(
         "https://api.openai.com/v1/realtime/client_secrets",
@@ -57,7 +35,13 @@ IMPORTANT: Start immediately with "Hi, I'm Story Buddy! I'm so excited to tell y
             session: {
               type: "realtime",
               model: "gpt-realtime",
-              instructions: instructions,
+              prompt: {
+                id: "pmpt_696dd9fba1148195a8f689a4da6ca7bd085fc16529f93b69",
+                variables: {
+                  story_title: storyTitle,
+                  story_context: storyContext,
+                },
+              },
               audio: {
                 input: {
                   turn_detection: {
