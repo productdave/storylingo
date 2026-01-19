@@ -29,6 +29,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { Spacing, BorderRadius, StoryBuddyColors } from "@/constants/theme";
 import type { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { getApiUrl } from "@/lib/query-client";
+import { getTranslation } from "@/constants/translations";
 
 type SessionStatus =
   | "idle"
@@ -45,7 +46,8 @@ export default function SessionScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "Session">>();
-  const { story } = route.params;
+  const { story, language } = route.params;
+  const t = getTranslation(language);
 
   const [status, setStatus] = useState<SessionStatus>("idle");
   const [isSessionActive, setIsSessionActive] = useState(false);
@@ -127,6 +129,7 @@ export default function SessionScreen() {
           storyTitle: story.title,
           storyContext: story.context,
           macroBeats: story.macroBeats,
+          language: language,
         }),
       });
 
@@ -158,8 +161,12 @@ export default function SessionScreen() {
         console.log("Data channel opened");
         
         // Automatically initiate the story by sending a message to the AI
-        // This tells the AI which story was selected and to greet the child
-        const initiationMessage = `The child has selected the "${story.title}" story. Please begin by saying hello to the child and welcoming them to the ${story.title} story.`;
+        // This tells the AI which story was selected, language preference, and to greet the child
+        const languageInstruction = language === "zh" 
+          ? "Please speak in Chinese (Mandarin) for the entire story session."
+          : "Please speak in English for the entire story session.";
+        const storyTranslation = t.stories[story.id as keyof typeof t.stories];
+        const initiationMessage = `The child has selected the "${storyTranslation.title}" story. ${languageInstruction} Please begin by saying hello to the child and welcoming them to the ${storyTranslation.title} story.`;
         
         // Send a conversation item with the story initiation
         const createItemEvent = {
@@ -390,24 +397,24 @@ export default function SessionScreen() {
   const getStatusText = () => {
     // Show paused status when paused
     if (isPaused && isSessionActive) {
-      return "Paused";
+      return t.session.paused;
     }
     // Show muted status when muted
     if (isMuted && isSessionActive) {
-      return "Muted";
+      return t.session.muted;
     }
     
     switch (status) {
       case "connecting":
-        return "Connecting...";
+        return t.session.connecting;
       case "listening":
-        return "Listening...";
+        return t.session.listening;
       case "speaking":
-        return "Speaking...";
+        return t.session.speaking;
       case "error":
-        return "Connection lost";
+        return t.session.connectionLost;
       default:
-        return "Connecting...";
+        return t.session.connecting;
     }
   };
 
@@ -495,7 +502,7 @@ export default function SessionScreen() {
               size={20}
               color={StoryBuddyColors.textSecondary}
             />
-            <ThemedText style={styles.controlButtonText}>Back</ThemedText>
+            <ThemedText style={styles.controlButtonText}>{t.session.back}</ThemedText>
           </Pressable>
 
           <Pressable
@@ -512,7 +519,7 @@ export default function SessionScreen() {
             <ThemedText
               style={[styles.controlButtonText, isMuted ? { color: StoryBuddyColors.error } : null]}
             >
-              {isMuted ? "Unmute" : "Mute"}
+              {isMuted ? t.session.unmute : t.session.mute}
             </ThemedText>
           </Pressable>
         </View>

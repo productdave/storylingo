@@ -5,7 +5,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/token - Create an ephemeral client secret for OpenAI Realtime API (GA version)
   app.post("/api/token", async (req, res) => {
     try {
-      const { storyId, storyTitle, storyContext, macroBeats } = req.body;
+      const { storyId, storyTitle, storyContext, macroBeats, language } = req.body;
 
       if (!storyId || !storyTitle || !macroBeats) {
         return res.status(400).json({ error: "Missing story information" });
@@ -16,11 +16,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .map((beat: string, i: number) => `${i + 1}. ${beat}`)
         .join("\n");
 
+      // Add language instruction to story context
+      const languageInstruction = language === "zh" 
+        ? "IMPORTANT: Speak only in Chinese (Mandarin) for this entire session. All responses, greetings, questions, and story narration must be in Chinese."
+        : "IMPORTANT: Speak only in English for this entire session. All responses, greetings, questions, and story narration must be in English.";
+      
+      const enhancedContext = `${languageInstruction}\n\n${storyContext || `A classic tale of ${storyTitle}`}`;
+
       // Log the variables being sent
       console.log("=== Token Request ===");
       console.log("Story Title:", storyTitle);
-      console.log("Story Context:", storyContext);
+      console.log("Story Context:", enhancedContext);
       console.log("Story Beats:", storyBeatsFormatted);
+      console.log("Language:", language || "en");
       console.log("Prompt ID:", "pmpt_696e819d09748196a4517a7b3e42c4560613f6be24ce5faa");
 
       // Create ephemeral client secret using OpenAI's GA Realtime endpoint
@@ -42,7 +50,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 id: "pmpt_696e819d09748196a4517a7b3e42c4560613f6be24ce5faa",
                 variables: {
                   story_title: { type: "input_text", text: storyTitle },
-                  story_context: { type: "input_text", text: storyContext || `A classic tale of ${storyTitle}` },
+                  story_context: { type: "input_text", text: enhancedContext },
                   story_beats: { type: "input_text", text: storyBeatsFormatted },
                 },
               },
