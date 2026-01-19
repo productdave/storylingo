@@ -1,12 +1,15 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import MainTabNavigator from "@/navigation/MainTabNavigator";
-import ModalScreen from "@/screens/ModalScreen";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
+import HomeScreen from "@/screens/HomeScreen";
+import StorySelectionScreen from "@/screens/StorySelectionScreen";
+import SessionScreen from "@/screens/SessionScreen";
+import type { Story } from "@/constants/stories";
 
 export type RootStackParamList = {
-  Main: undefined;
-  Modal: undefined;
+  Home: undefined;
+  StorySelection: undefined;
+  Session: { story: Story };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -17,17 +20,24 @@ export default function RootStackNavigator() {
   return (
     <Stack.Navigator screenOptions={screenOptions}>
       <Stack.Screen
-        name="Main"
-        component={MainTabNavigator}
+        name="Home"
+        component={HomeScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="Modal"
-        component={ModalScreen}
+        name="StorySelection"
+        component={StorySelectionScreen}
         options={{
-          presentation: "modal",
-          headerTitle: "Modal",
+          headerTitle: "Choose Your Story",
+          headerBackVisible: false,
         }}
+      />
+      <Stack.Screen
+        name="Session"
+        component={SessionScreen}
+        options={({ route }) => ({
+          headerTitle: route.params.story.title,
+        })}
       />
     </Stack.Navigator>
   );

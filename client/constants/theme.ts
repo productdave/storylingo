@@ -1,30 +1,42 @@
 import { Platform } from "react-native";
 
-const tintColorLight = "#007AFF";
-const tintColorDark = "#0A84FF";
+export const StoryBuddyColors = {
+  primary: "#FF6B9D",
+  secondary: "#FFD93D",
+  background: "#F8F5FF",
+  surface: "#FFFFFF",
+  textPrimary: "#2D1B4E",
+  textSecondary: "#7E6BA3",
+  success: "#6BCF7F",
+  border: "#E5D9F2",
+  error: "#FF6B6B",
+};
+
+const tintColorLight = StoryBuddyColors.primary;
+const tintColorDark = "#FF8FB3";
 
 export const Colors = {
   light: {
-    text: "#11181C",
+    text: StoryBuddyColors.textPrimary,
     buttonText: "#FFFFFF",
-    tabIconDefault: "#687076",
+    tabIconDefault: StoryBuddyColors.textSecondary,
     tabIconSelected: tintColorLight,
-    link: "#007AFF",
-    backgroundRoot: "#FFFFFF", // Elevation 0
-    backgroundDefault: "#F2F2F2", // Elevation 1
-    backgroundSecondary: "#E6E6E6", // Elevation 2
-    backgroundTertiary: "#D9D9D9", // Elevation 3
+    link: StoryBuddyColors.primary,
+    backgroundRoot: StoryBuddyColors.background,
+    backgroundDefault: StoryBuddyColors.surface,
+    backgroundSecondary: "#F0EBF8",
+    backgroundTertiary: "#E5D9F2",
   },
   dark: {
-    text: "#ECEDEE",
+    text: "#F8F5FF",
     buttonText: "#FFFFFF",
     tabIconDefault: "#9BA1A6",
     tabIconSelected: tintColorDark,
-    link: "#0A84FF",
-    backgroundRoot: "#1F2123", // Elevation 0
-    backgroundDefault: "#2A2C2E", // Elevation 1
-    backgroundSecondary: "#353739", // Elevation 2
-    backgroundTertiary: "#404244", // Elevation 3
+    link: tintColorDark,
+    backgroundRoot: "#1A1025",
+    backgroundDefault: "#2D1B4E",
+    backgroundSecondary: "#3D2B5E",
+    backgroundTertiary: "#4D3B6E",
   },
 };
 
@@ -38,8 +50,9 @@ export const Spacing = {
   "3xl": 32,
   "4xl": 40,
   "5xl": 48,
+  "6xl": 60,
   inputHeight: 48,
-  buttonHeight: 52,
+  buttonHeight: 70,
 };
 
 export const BorderRadius = {
@@ -93,13 +106,9 @@ export const Typography = {
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: "system-ui",
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: "ui-serif",
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: "ui-rounded",
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: "ui-monospace",
   },
   default: {
