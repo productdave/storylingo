@@ -1,0 +1,109 @@
+Build me a working prototype with:
+	1.	iOS app (SwiftUI)
+	2.	Backend (Node.js + Express) to mint OpenAI Realtime ephemeral keys (client secrets) and optionally proxy SDP later
+
+This app is a voice-first interactive storyteller for kids (3–10). It uses OpenAI’s Realtime API for real-time voice conversation.  ￼
+
+UX requirements (iOS)
+	•	Home screen:
+	•	Title: “Story Buddy”
+	•	Button: Start
+	•	On Start:
+	•	Show 3 story buttons (Snow White, Rapunzel, Peter Pan)
+	•	The AI must NOT ask “which story?” at session start. The story is selected via button.
+	•	After story selection:
+	•	Show a “Session” screen with:
+	•	Big Talk button (press-and-hold preferred; tap-to-toggle acceptable)
+	•	Stop button
+	•	“Start Again” button
+	•	Small status text: “Connecting… / Listening… / Speaking…”
+	•	The app should collect (via voice, inside the story): child name, age, favourite things (only safe info). Do not ask for address/school/phone/photos/last name.
+
+Realtime API approach
+	•	Use OpenAI Realtime with low-latency voice.
+	•	For MVP, implement WebSocket from iOS if WebRTC is too heavy in this environment. The docs say WebRTC is generally more robust for client/mobile, but WebSocket is acceptable to get working first.  ￼
+	•	Authenticate the iOS client using an ephemeral client secret minted by the backend via OpenAI’s REST endpoint (do not embed the OpenAI API key in the app).  ￼
+
+Backend requirements (Node/Express)
+
+Create:
+	•	POST /token
+	•	Uses server env var OPENAI_API_KEY
+	•	Calls OpenAI to create an ephemeral client secret for Realtime
+	•	Returns JSON: { "value": "<client_secret_value>", "expires_at": <timestamp> }
+	•	Keep the backend minimal, with clear instructions on how to run it locally and how to point the iOS app at it.
+
+Use OpenAI’s documented ephemeral key flow for Realtime (client secrets).  ￼
+
+Realtime session setup
+
+When the user taps a story button, the iOS app must:
+	1.	Fetch /token from backend
+	2.	Open a Realtime connection using the ephemeral client secret
+	3.	Immediately send a session.update event that sets:
+	•	instructions: the storyteller prompt below
+	•	metadata: selected story title and a macro beat list
+session.update is the documented way to update session configuration.  ￼
+
+Story buttons behaviour
+	•	Selecting a story injects:
+	•	selected_story_title
+	•	macro_beats list
+	•	current_beat = 1
+	•	The agent must start with: “Hi, I’m Story Buddy…” and begin the chosen story.
+
+Audio behaviour (MVP)
+	•	If full speech-to-speech streaming is hard, implement:
+	•	Capture microphone audio
+	•	Send audio to Realtime
+	•	Play back model audio
+	•	Keep it simple. Prefer a working end-to-end demo over perfect audio UX.
+	•	Include placeholders/comments where production-grade audio buffering/VAD would go.
+
+Story agent prompt (use as session instructions)
+
+Use this exactly as the instructions for the Realtime session (do not ask the user to pick story via voice; story comes from button selection):
+
+You are a voice-first, interactive storyteller for children aged 3–10. The child speaks, not types. Your job is to tell a classic public domain folktale as an interactive story, where the child is included as a helper or participant. The story must always follow the major plot events and ending as told in the original tale (macro story direction), but the child can make small choices that affect details or how their character acts.
+
+IMPORTANT: Each story should be completed in around 10 child interactions (back-and-forth turns). Plan your narrative arc, prompt timing, and engagement accordingly so the whole story fits within about 10 total child responses. Prioritise moving the plot forward at every turn.
+
+Speak in a warm, lively, supportive voice. Responses must be short, conversational, and easy to follow aloud. Do not monopolise the conversation.
+
+Engagement must vary. Sometimes A/B choices, sometimes open questions, sometimes invitations to imagine, say a magic word, make a sound, yes/no questions. Do not always offer only two options, but when you do present choices, limit to two.
+
+Guidelines:
+	•	The story must fit into approximately 10 turns.
+	•	Quickly ask for the child’s name, age, and favourite things (if you don’t know yet).
+	•	In every response, incorporate the child’s name and preferences, and use age-appropriate language.
+	•	Strictly follow the selected story’s macro beats in order. Do not invent new plot beats or change the ending.
+	•	Keep content safe: do not request address, school, phone, photos, last name. Avoid romance, violence, scary, or adult themes. If asked for unsafe content, gently refuse and redirect.
+	•	Only run one session at a time.
+
+Ending behaviour:
+	•	End each story with: (a) 2-sentence recap (b) one-sentence lesson (c) supportive closing sentence
+	•	Then ask: “Would you like to start a new story, or finish now?”
+	•	If “Start Again”, confirm, then offer 3 story choices with brief descriptions.
+	•	If “Stop”, thank them and end.
+
+Macro beats to include (inject via metadata based on selected story)
+
+Create macro beats arrays for:
+	•	Snow White (8 beats)
+	•	Rapunzel (8 beats)
+	•	Peter Pan (8 beats)
+Keep them kid-safe (no scary detail), but preserve the core plot and positive ending.
+
+Deliverables
+	•	A Replit project containing:
+	•	/server Node/Express app with /token
+	•	/ios SwiftUI app project (or clear iOS code folder) with:
+	•	UI screens and buttons described above
+	•	Realtime connection code (WebSocket acceptable)
+	•	session.update event sent after story selection
+	•	Start/Stop/Start Again wiring
+	•	A README with:
+	•	How to set OPENAI_API_KEY on server
+	•	How to run server
+	•	How to configure the iOS app base URL for /token
+	•	Notes on upgrading WebSocket to WebRTC later for better mobile latency  ￼
