@@ -49,9 +49,11 @@ export default function SessionScreen() {
 
   const [status, setStatus] = useState<SessionStatus>("idle");
   const [isSessionActive, setIsSessionActive] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
 
   const pcRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
 
   const talkButtonScale = useSharedValue(1);
   const pulseScale = useSharedValue(1);
@@ -200,6 +202,7 @@ export default function SessionScreen() {
 
       // Get local audio stream
       const ms = await navigator.mediaDevices.getUserMedia({ audio: true });
+      localStreamRef.current = ms;
       ms.getTracks().forEach((track) => pc.addTrack(track, ms));
 
       // Create offer
@@ -301,6 +304,11 @@ export default function SessionScreen() {
       pcRef.current.close();
       pcRef.current = null;
     }
+    // Stop local audio stream
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current = null;
+    }
     // Stop audio playback
     if (audioRef.current) {
       audioRef.current.pause();
@@ -310,7 +318,19 @@ export default function SessionScreen() {
     // Reset state
     setIsSessionActive(false);
     setStatus("idle");
+    setIsMuted(false);
     stopPulseAnimation();
+  };
+
+  const handleMute = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (localStreamRef.current) {
+      const audioTracks = localStreamRef.current.getAudioTracks();
+      audioTracks.forEach(track => {
+        track.enabled = isMuted; // Toggle: if muted, enable; if not muted, disable
+      });
+      setIsMuted(!isMuted);
+    }
   };
 
   const handleStartAgain = () => {
@@ -406,6 +426,24 @@ export default function SessionScreen() {
           </Pressable>
 
           <Pressable
+            style={[styles.controlButton, isMuted ? styles.muteButtonActive : null]}
+            onPress={handleMute}
+            testID="button-mute"
+            disabled={!isSessionActive}
+          >
+            <Feather
+              name={isMuted ? "mic-off" : "mic"}
+              size={20}
+              color={isMuted ? StoryBuddyColors.error : StoryBuddyColors.textSecondary}
+            />
+            <ThemedText
+              style={[styles.controlButtonText, isMuted ? { color: StoryBuddyColors.error } : null]}
+            >
+              {isMuted ? "Unmute" : "Mute"}
+            </ThemedText>
+          </Pressable>
+
+          <Pressable
             style={[styles.controlButton, styles.stopButton]}
             onPress={handleStop}
             testID="button-stop"
@@ -467,7 +505,9 @@ const styles = StyleSheet.create({
   },
   controlsContainer: {
     flexDirection: "row",
-    gap: Spacing["3xl"],
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: Spacing.lg,
   },
   controlButton: {
     flexDirection: "row",
@@ -482,6 +522,10 @@ const styles = StyleSheet.create({
   },
   stopButton: {
     borderColor: StoryBuddyColors.error,
+  },
+  muteButtonActive: {
+    borderColor: StoryBuddyColors.error,
+    backgroundColor: "rgba(255, 107, 157, 0.1)",
   },
   controlButtonText: {
     fontSize: 14,
