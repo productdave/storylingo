@@ -11,8 +11,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Missing story information" });
       }
 
-      // Build story context to pass as variables to the saved prompt
-      const storyContext = `
+      // Build supplementary instructions with story context
+      // These will be appended to the saved prompt's instructions
+      const storyInstructions = `
 SELECTED STORY: ${storyTitle}
 
 MACRO BEATS TO FOLLOW (in order):
@@ -22,7 +23,7 @@ IMPORTANT: Start immediately with "Hi, I'm Story Buddy! I'm so excited to tell y
 
       // Create ephemeral client secret using OpenAI's GA Realtime endpoint
       // Uses the user's saved prompt ID from OpenAI dashboard
-      // See: https://platform.openai.com/docs/api-reference/realtime-sessions
+      // The instructions field supplements the saved prompt
       const response = await fetch(
         "https://api.openai.com/v1/realtime/client_secrets",
         {
@@ -37,11 +38,8 @@ IMPORTANT: Start immediately with "Hi, I'm Story Buddy! I'm so excited to tell y
               model: "gpt-realtime",
               prompt: {
                 id: "pmpt_696dd9fba1148195a8f689a4da6ca7bd085fc16529f93b69",
-                variables: {
-                  story_title: storyTitle,
-                  story_context: storyContext,
-                },
               },
+              instructions: storyInstructions,
               audio: {
                 input: {
                   turn_detection: {
