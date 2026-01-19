@@ -5,15 +5,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/token - Create an ephemeral client secret for OpenAI Realtime API (GA version)
   app.post("/api/token", async (req, res) => {
     try {
-      const { storyId, storyTitle, macroBeats } = req.body;
+      const { storyId, storyTitle, storyContext, macroBeats } = req.body;
 
       if (!storyId || !storyTitle || !macroBeats) {
         return res.status(400).json({ error: "Missing story information" });
       }
 
+      // Format story beats as a numbered list string
+      const storyBeatsFormatted = macroBeats
+        .map((beat: string, i: number) => `${i + 1}. ${beat}`)
+        .join("\n");
+
       // Create ephemeral client secret using OpenAI's GA Realtime endpoint
       // Uses the user's saved prompt ID from OpenAI dashboard
-      // Relying entirely on the saved prompt for instructions and behavior
+      // Pass story variables to be injected into the prompt template
       const response = await fetch(
         "https://api.openai.com/v1/realtime/client_secrets",
         {
@@ -28,6 +33,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               model: "gpt-realtime",
               prompt: {
                 id: "pmpt_696dd9fba1148195a8f689a4da6ca7bd085fc16529f93b69",
+                variables: {
+                  story_title: storyTitle,
+                  story_context: storyContext || `A classic tale of ${storyTitle}`,
+                  story_beats: storyBeatsFormatted,
+                },
               },
             },
           }),
