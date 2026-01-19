@@ -16,6 +16,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .map((beat: string, i: number) => `${i + 1}. ${beat}`)
         .join("\n");
 
+      // Log the variables being sent
+      console.log("=== Token Request ===");
+      console.log("Story Title:", storyTitle);
+      console.log("Story Context:", storyContext);
+      console.log("Story Beats:", storyBeatsFormatted);
+      console.log("Prompt ID:", "pmpt_696dd9fba1148195a8f689a4da6ca7bd085fc16529f93b69");
+
       // Create ephemeral client secret using OpenAI's GA Realtime endpoint
       // Uses the user's saved prompt ID from OpenAI dashboard
       // Pass story variables to be injected into the prompt template
