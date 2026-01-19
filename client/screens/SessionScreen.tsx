@@ -272,26 +272,50 @@ export default function SessionScreen() {
 
   const handleStop = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert("End Story?", "Are you sure you want to stop the story?", [
-      { text: "Keep Going", style: "cancel" },
-      {
-        text: "Stop",
-        style: "destructive",
-        onPress: () => {
-          if (pcRef.current) {
-            pcRef.current.close();
-          }
-          navigation.goBack();
+    
+    // On web, use confirm dialog; on native, use Alert
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm("End Story? Are you sure you want to stop the story?");
+      if (confirmed) {
+        stopSession();
+        navigation.goBack();
+      }
+    } else {
+      Alert.alert("End Story?", "Are you sure you want to stop the story?", [
+        { text: "Keep Going", style: "cancel" },
+        {
+          text: "Stop",
+          style: "destructive",
+          onPress: () => {
+            stopSession();
+            navigation.goBack();
+          },
         },
-      },
-    ]);
+      ]);
+    }
+  };
+
+  const stopSession = () => {
+    // Close WebRTC connection
+    if (pcRef.current) {
+      pcRef.current.close();
+      pcRef.current = null;
+    }
+    // Stop audio playback
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.srcObject = null;
+      audioRef.current = null;
+    }
+    // Reset state
+    setIsSessionActive(false);
+    setStatus("idle");
+    stopPulseAnimation();
   };
 
   const handleStartAgain = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (pcRef.current) {
-      pcRef.current.close();
-    }
+    stopSession();
     navigation.replace("StorySelection");
   };
 
