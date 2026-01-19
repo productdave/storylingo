@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Story Buddy",
+    "name": "StoryTale",
     "slug": "story-buddy",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,7 +12,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.storybuddy.app",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Story Buddy needs microphone access so you can talk to your storyteller friend."
+        "NSMicrophoneUsageDescription": "StoryTale needs microphone access so you can talk to your storyteller friend."
       }
     },
     "android": {
@@ -48,7 +48,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Story Buddy needs microphone access so you can talk to your storyteller friend."
+          "microphonePermission": "StoryTale needs microphone access so you can talk to your storyteller friend."
         }
       ]
     ],

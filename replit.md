@@ -1,10 +1,10 @@
-# Story Buddy
+# StoryTale
 
 A voice-first interactive storyteller app for children ages 3-10. Children can have real-time voice conversations with an AI storyteller who guides them through classic fairy tales.
 
 ## Overview
 
-Story Buddy uses OpenAI's Realtime API (GA version) to create interactive, voice-based storytelling experiences. Children select a story (Snow White, Rapunzel, or Peter Pan) and then engage in a voice conversation with the AI storyteller who:
+StoryTale uses OpenAI's Realtime API (GA version) to create interactive, voice-based storytelling experiences. Children select a story (Snow White, Rapunzel, or Peter Pan) and then engage in a voice conversation with the AI storyteller who:
 - Asks for the child's name, age, and favorite things
 - Tells the story with the child as a participant
 - Offers choices and interactive moments throughout

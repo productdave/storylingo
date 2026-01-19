@@ -100,7 +100,7 @@ export default function HomeScreen() {
         </Animated.View>
 
         <View style={styles.titleContainer}>
-          <ThemedText style={styles.title}>Story Buddy</ThemedText>
+          <ThemedText style={styles.title}>StoryTale</ThemedText>
           <ThemedText style={styles.subtitle}>
             Your magical storytelling friend
           </ThemedText>
