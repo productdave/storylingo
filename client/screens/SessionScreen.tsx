@@ -138,6 +138,68 @@ export default function SessionScreen() {
         audioEl.srcObject = e.streams[0];
       };
 
+      // Listen for data channel from OpenAI (they create it, we listen)
+      pc.ondatachannel = (event) => {
+        const dc = event.channel;
+        console.log("Data channel received:", dc.label);
+        
+        dc.onopen = () => {
+          console.log("Data channel opened");
+        };
+        dc.onmessage = (msgEvent) => {
+          try {
+            const data = JSON.parse(msgEvent.data);
+            console.log("OpenAI event:", data.type);
+            
+            // Update status based on server events
+            if (data.type === "response.audio.delta" || data.type === "response.audio_transcript.delta") {
+              setStatus("speaking");
+            } else if (data.type === "response.done" || data.type === "input_audio_buffer.speech_started") {
+              setStatus("listening");
+            } else if (data.type === "session.created") {
+              console.log("Session created successfully");
+            } else if (data.type === "error") {
+              console.error("OpenAI error:", data.error);
+            }
+          } catch (e) {
+            // Non-JSON message, ignore
+          }
+        };
+        dc.onerror = (error) => {
+          console.error("Data channel error:", error);
+        };
+        dc.onclose = () => {
+          console.log("Data channel closed");
+          setIsSessionActive(false);
+          setStatus("error");
+          stopPulseAnimation();
+        };
+      };
+
+      // Monitor connection state
+      pc.onconnectionstatechange = () => {
+        console.log("Connection state:", pc.connectionState);
+        if (pc.connectionState === "connected") {
+          setStatus("listening");
+          setIsSessionActive(true);
+          startPulseAnimation();
+        } else if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
+          setIsSessionActive(false);
+          setStatus("error");
+          stopPulseAnimation();
+        }
+      };
+
+      // Monitor ICE connection state
+      pc.oniceconnectionstatechange = () => {
+        console.log("ICE state:", pc.iceConnectionState);
+        if (pc.iceConnectionState === "disconnected" || pc.iceConnectionState === "failed") {
+          setIsSessionActive(false);
+          setStatus("error");
+          stopPulseAnimation();
+        }
+      };
+
       // Get local audio stream
       const ms = await navigator.mediaDevices.getUserMedia({ audio: true });
       ms.getTracks().forEach((track) => pc.addTrack(track, ms));
@@ -166,20 +228,8 @@ export default function SessionScreen() {
       const answerSdp = await sdpResponse.text();
       await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
 
-      // Connection established
-      setStatus("listening");
-      setIsSessionActive(true);
-      startPulseAnimation();
+      // Connection handshake complete - status will update via onconnectionstatechange
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      // Monitor connection state
-      pc.onconnectionstatechange = () => {
-        if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
-          setIsSessionActive(false);
-          setStatus("error");
-          stopPulseAnimation();
-        }
-      };
 
     } catch (error) {
       console.error("Connection error:", error);
