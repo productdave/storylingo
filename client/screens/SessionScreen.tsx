@@ -59,7 +59,14 @@ export default function SessionScreen() {
   const pulseScale = useSharedValue(1);
   const glowOpacity = useSharedValue(0);
 
+  // Auto-connect when screen mounts (triggered by story selection)
   useEffect(() => {
+    if (Platform.OS === "web") {
+      connectToRealtimeWeb();
+    } else {
+      connectToRealtimeNative();
+    }
+
     return () => {
       if (pcRef.current) {
         pcRef.current.close();
@@ -281,15 +288,16 @@ export default function SessionScreen() {
     setStatus("idle");
   }, []);
 
-  const handleTalkPress = async () => {
+  const handleTalkPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    if (!isSessionActive) {
-      if (Platform.OS === "web") {
-        await connectToRealtimeWeb();
-      } else {
-        await connectToRealtimeNative();
-      }
+    // Talk button now acts as mute/unmute toggle
+    if (isSessionActive && localStreamRef.current) {
+      const audioTracks = localStreamRef.current.getAudioTracks();
+      audioTracks.forEach(track => {
+        track.enabled = isMuted; // Toggle: if muted, enable; if not muted, disable
+      });
+      setIsMuted(!isMuted);
     }
   };
 
@@ -350,24 +358,18 @@ export default function SessionScreen() {
     stopPulseAnimation();
   };
 
-  const handleMute = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (localStreamRef.current) {
-      const audioTracks = localStreamRef.current.getAudioTracks();
-      audioTracks.forEach(track => {
-        track.enabled = isMuted; // Toggle: if muted, enable; if not muted, disable
-      });
-      setIsMuted(!isMuted);
-    }
-  };
-
-  const handleStartAgain = () => {
+  const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     stopSession();
     navigation.replace("StorySelection");
   };
 
   const getStatusText = () => {
+    // Show muted status when muted
+    if (isMuted && isSessionActive) {
+      return "Muted";
+    }
+    
     switch (status) {
       case "connecting":
         return "Connecting...";
@@ -378,11 +380,16 @@ export default function SessionScreen() {
       case "error":
         return "Connection lost";
       default:
-        return "Tap to start";
+        return "Connecting...";
     }
   };
 
   const getTalkButtonColor = () => {
+    // Show muted color when muted
+    if (isMuted && isSessionActive) {
+      return ["#888888", "#AAAAAA"];
+    }
+    
     switch (status) {
       case "listening":
         return [StoryBuddyColors.primary, "#FF8FB3"];
@@ -395,6 +402,16 @@ export default function SessionScreen() {
       default:
         return [StoryBuddyColors.primary, "#FF8FB3"];
     }
+  };
+  
+  const getTalkButtonIcon = () => {
+    if (isMuted && isSessionActive) {
+      return "mic-off";
+    }
+    if (status === "speaking") {
+      return "volume-2";
+    }
+    return "mic";
   };
 
   return (
@@ -431,7 +448,7 @@ export default function SessionScreen() {
               style={styles.talkButtonGradient}
             >
               <Feather
-                name={status === "speaking" ? "volume-2" : "mic"}
+                name={getTalkButtonIcon() as any}
                 size={64}
                 color="#FFFFFF"
               />
@@ -442,33 +459,15 @@ export default function SessionScreen() {
         <View style={styles.controlsContainer}>
           <Pressable
             style={styles.controlButton}
-            onPress={handleStartAgain}
-            testID="button-start-again"
+            onPress={handleBack}
+            testID="button-back"
           >
             <Feather
-              name="refresh-cw"
+              name="arrow-left"
               size={20}
               color={StoryBuddyColors.textSecondary}
             />
-            <ThemedText style={styles.controlButtonText}>Start Again</ThemedText>
-          </Pressable>
-
-          <Pressable
-            style={[styles.controlButton, isMuted ? styles.muteButtonActive : null]}
-            onPress={handleMute}
-            testID="button-mute"
-            disabled={!isSessionActive}
-          >
-            <Feather
-              name={isMuted ? "mic-off" : "mic"}
-              size={20}
-              color={isMuted ? StoryBuddyColors.error : StoryBuddyColors.textSecondary}
-            />
-            <ThemedText
-              style={[styles.controlButtonText, isMuted ? { color: StoryBuddyColors.error } : null]}
-            >
-              {isMuted ? "Unmute" : "Mute"}
-            </ThemedText>
+            <ThemedText style={styles.controlButtonText}>Back</ThemedText>
           </Pressable>
 
           <Pressable
@@ -550,10 +549,6 @@ const styles = StyleSheet.create({
   },
   stopButton: {
     borderColor: StoryBuddyColors.error,
-  },
-  muteButtonActive: {
-    borderColor: StoryBuddyColors.error,
-    backgroundColor: "rgba(255, 107, 157, 0.1)",
   },
   controlButtonText: {
     fontSize: 14,
