@@ -146,6 +146,34 @@ export default function SessionScreen() {
       const dc = pc.createDataChannel("oai-events");
       dc.onopen = () => {
         console.log("Data channel opened");
+        
+        // Automatically initiate the story by sending a message to the AI
+        // This tells the AI which story was selected and to greet the child
+        const initiationMessage = `The child has selected the "${story.title}" story. Please begin by saying hello to the child and welcoming them to the ${story.title} story.`;
+        
+        // Send a conversation item with the story initiation
+        const createItemEvent = {
+          type: "conversation.item.create",
+          item: {
+            type: "message",
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: initiationMessage,
+              },
+            ],
+          },
+        };
+        dc.send(JSON.stringify(createItemEvent));
+        console.log("Sent story initiation:", initiationMessage);
+        
+        // Trigger the AI to respond
+        const responseEvent = {
+          type: "response.create",
+        };
+        dc.send(JSON.stringify(responseEvent));
+        console.log("Triggered AI response");
       };
       dc.onmessage = (msgEvent) => {
         try {
