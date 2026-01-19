@@ -34,9 +34,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               prompt: {
                 id: "pmpt_696dd9fba1148195a8f689a4da6ca7bd085fc16529f93b69",
                 variables: {
-                  story_title: storyTitle,
-                  story_context: storyContext || `A classic tale of ${storyTitle}`,
-                  story_beats: storyBeatsFormatted,
+                  story_title: { type: "input_text", text: storyTitle },
+                  story_context: { type: "input_text", text: storyContext || `A classic tale of ${storyTitle}` },
+                  story_beats: { type: "input_text", text: storyBeatsFormatted },
                 },
               },
             },
