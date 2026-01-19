@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, StyleSheet, ScrollView, Pressable, Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
@@ -17,6 +17,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks/useTheme";
 import { Spacing, BorderRadius, StoryBuddyColors } from "@/constants/theme";
 import { STORIES, Story } from "@/constants/stories";
+import { Language, getTranslation } from "@/constants/translations";
 import type { RootStackParamList } from "@/navigation/RootStackNavigator";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -25,10 +26,13 @@ interface StoryCardProps {
   story: Story;
   index: number;
   onPress: () => void;
+  language: Language;
 }
 
-function StoryCard({ story, index, onPress }: StoryCardProps) {
+function StoryCard({ story, index, onPress, language }: StoryCardProps) {
   const scale = useSharedValue(1);
+  const t = getTranslation(language);
+  const storyTranslation = t.stories[story.id as keyof typeof t.stories];
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -61,9 +65,9 @@ function StoryCard({ story, index, onPress }: StoryCardProps) {
           colors={["transparent", "rgba(45, 27, 78, 0.8)"]}
           style={styles.storyOverlay}
         >
-          <ThemedText style={styles.storyTitle}>{story.title}</ThemedText>
+          <ThemedText style={styles.storyTitle}>{storyTranslation.title}</ThemedText>
           <ThemedText style={styles.storyDescription}>
-            {story.description}
+            {storyTranslation.description}
           </ThemedText>
         </LinearGradient>
       </AnimatedPressable>
@@ -77,9 +81,17 @@ export default function StorySelectionScreen() {
   const { theme } = useTheme();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  
+  const [language, setLanguage] = useState<Language>("en");
+  const t = getTranslation(language);
 
   const handleSelectStory = (story: Story) => {
-    navigation.navigate("Session", { story });
+    navigation.navigate("Session", { story, language });
+  };
+
+  const toggleLanguage = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setLanguage(language === "en" ? "zh" : "en");
   };
 
   return (
@@ -89,12 +101,30 @@ export default function StorySelectionScreen() {
       end={{ x: 0.5, y: 1 }}
       style={styles.container}
     >
+      <View style={[styles.languageToggleContainer, { paddingTop: headerHeight + Spacing.md }]}>
+        <Pressable
+          style={styles.languageToggle}
+          onPress={toggleLanguage}
+          testID="button-language-toggle"
+        >
+          <View style={[styles.languageOption, language === "en" ? styles.languageOptionActive : null]}>
+            <ThemedText style={[styles.languageText, language === "en" ? styles.languageTextActive : null]}>
+              EN
+            </ThemedText>
+          </View>
+          <View style={[styles.languageOption, language === "zh" ? styles.languageOptionActive : null]}>
+            <ThemedText style={[styles.languageText, language === "zh" ? styles.languageTextActive : null]}>
+              中文
+            </ThemedText>
+          </View>
+        </Pressable>
+      </View>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: headerHeight + Spacing.xl,
+            paddingTop: Spacing.lg,
             paddingBottom: insets.bottom + Spacing["2xl"],
           },
         ]}
@@ -106,6 +136,7 @@ export default function StorySelectionScreen() {
             story={story}
             index={index}
             onPress={() => handleSelectStory(story)}
+            language={language}
           />
         ))}
       </ScrollView>
@@ -116,6 +147,35 @@ export default function StorySelectionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  languageToggleContainer: {
+    alignItems: "center",
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
+  },
+  languageToggle: {
+    flexDirection: "row",
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    borderRadius: BorderRadius.full,
+    padding: 4,
+    borderWidth: 2,
+    borderColor: StoryBuddyColors.border,
+  },
+  languageOption: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.full,
+  },
+  languageOptionActive: {
+    backgroundColor: StoryBuddyColors.primary,
+  },
+  languageText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: StoryBuddyColors.textSecondary,
+  },
+  languageTextActive: {
+    color: "#FFFFFF",
   },
   scrollView: {
     flex: 1,
