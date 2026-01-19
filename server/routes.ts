@@ -21,7 +21,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Story Title:", storyTitle);
       console.log("Story Context:", storyContext);
       console.log("Story Beats:", storyBeatsFormatted);
-      console.log("Prompt ID:", "pmpt_696dd9fba1148195a8f689a4da6ca7bd085fc16529f93b69");
+      console.log("Prompt ID:", "pmpt_696e819d09748196a4517a7b3e42c4560613f6be24ce5faa");
 
       // Create ephemeral client secret using OpenAI's GA Realtime endpoint
       // Uses the user's saved prompt ID from OpenAI dashboard
@@ -39,7 +39,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               type: "realtime",
               model: "gpt-realtime",
               prompt: {
-                id: "pmpt_696dd9fba1148195a8f689a4da6ca7bd085fc16529f93b69",
+                id: "pmpt_696e819d09748196a4517a7b3e42c4560613f6be24ce5faa",
                 variables: {
                   story_title: { type: "input_text", text: storyTitle },
                   story_context: { type: "input_text", text: storyContext || `A classic tale of ${storyTitle}` },
