@@ -49,7 +49,6 @@ export default function SessionScreen() {
 
   const [status, setStatus] = useState<SessionStatus>("idle");
   const [isSessionActive, setIsSessionActive] = useState(false);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
 
   const pcRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -59,18 +58,6 @@ export default function SessionScreen() {
   const glowOpacity = useSharedValue(0);
 
   useEffect(() => {
-    // Check for microphone permission on web
-    if (Platform.OS === "web") {
-      navigator.permissions?.query({ name: "microphone" as PermissionName }).then((result) => {
-        setHasPermission(result.state === "granted");
-      }).catch(() => {
-        setHasPermission(null);
-      });
-    } else {
-      // On native, we'll handle permissions when user taps
-      setHasPermission(true);
-    }
-
     return () => {
       if (pcRef.current) {
         pcRef.current.close();
@@ -159,8 +146,9 @@ export default function SessionScreen() {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      // Step 3: Exchange SDP with OpenAI Realtime API (GA endpoint)
-      const sdpResponse = await fetch("https://api.openai.com/v1/realtime/calls", {
+      // Step 3: Exchange SDP with OpenAI Realtime API
+      // Using the correct GA endpoint: /v1/realtime
+      const sdpResponse = await fetch("https://api.openai.com/v1/realtime", {
         method: "POST",
         body: offer.sdp,
         headers: {

@@ -44,7 +44,7 @@ ${macroBeats.map((beat: string, i: number) => `${i + 1}. ${beat}`).join("\n")}
 IMPORTANT: Start immediately with "Hi, I'm Story Buddy! I'm so excited to tell you the story of ${storyTitle}!" Then quickly ask for the child's name before beginning the adventure.`;
 
       // Create ephemeral client secret using OpenAI's GA Realtime endpoint
-      // See: https://platform.openai.com/docs/guides/realtime
+      // See: https://platform.openai.com/docs/api-reference/realtime-sessions
       const response = await fetch(
         "https://api.openai.com/v1/realtime/client_secrets",
         {
@@ -59,18 +59,17 @@ IMPORTANT: Start immediately with "Hi, I'm Story Buddy! I'm so excited to tell y
               model: "gpt-realtime",
               instructions: instructions,
               audio: {
-                output: { voice: "alloy" },
-              },
-              input: {
-                audio: {
-                  transcription: { model: "gpt-audio" },
+                input: {
+                  turn_detection: {
+                    type: "server_vad",
+                    threshold: 0.5,
+                    prefix_padding_ms: 300,
+                    silence_duration_ms: 500,
+                  },
                 },
-              },
-              turn_detection: {
-                type: "server_vad",
-                threshold: 0.5,
-                prefix_padding_ms: 300,
-                silence_duration_ms: 500,
+                output: {
+                  voice: "alloy",
+                },
               },
             },
           }),
