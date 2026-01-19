@@ -24,7 +24,6 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { useAudioPermission } from "expo-audio";
 
 import { ThemedText } from "@/components/ThemedText";
 import { Spacing, BorderRadius, StoryBuddyColors } from "@/constants/theme";
@@ -50,19 +49,31 @@ export default function SessionScreen() {
 
   const [status, setStatus] = useState<SessionStatus>("idle");
   const [isSessionActive, setIsSessionActive] = useState(false);
-  const [permission, requestPermission] = useAudioPermission();
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const pcRef = useRef<any>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const talkButtonScale = useSharedValue(1);
   const pulseScale = useSharedValue(1);
   const glowOpacity = useSharedValue(0);
 
   useEffect(() => {
+    // Check for microphone permission on web
+    if (Platform.OS === "web") {
+      navigator.permissions?.query({ name: "microphone" as PermissionName }).then((result) => {
+        setHasPermission(result.state === "granted");
+      }).catch(() => {
+        setHasPermission(null);
+      });
+    } else {
+      // On native, we'll handle permissions when user taps
+      setHasPermission(true);
+    }
+
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
+      if (pcRef.current) {
+        pcRef.current.close();
       }
     };
   }, []);
@@ -102,10 +113,11 @@ export default function SessionScreen() {
     opacity: glowOpacity.value,
   }));
 
-  const connectToRealtime = useCallback(async () => {
+  const connectToRealtimeWeb = useCallback(async () => {
     try {
       setStatus("connecting");
 
+      // Step 1: Get ephemeral token from our backend
       const baseUrl = getApiUrl();
       const tokenUrl = new URL("/api/token", baseUrl);
       const response = await fetch(tokenUrl.toString(), {
@@ -119,54 +131,68 @@ export default function SessionScreen() {
       });
 
       if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Token error:", errorData);
         throw new Error("Failed to get token");
       }
 
       const { client_secret } = await response.json();
 
-      const wsUrl = `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17`;
+      // Step 2: Create WebRTC peer connection (web only)
+      const pc = new RTCPeerConnection();
+      pcRef.current = pc;
 
-      const ws = new WebSocket(wsUrl, [
-        "realtime",
-        `openai-insecure-api-key.${client_secret.value}`,
-      ]);
+      // Set up audio element to play remote audio
+      const audioEl = document.createElement("audio");
+      audioEl.autoplay = true;
+      audioRef.current = audioEl;
 
-      ws.onopen = () => {
-        setStatus("listening");
-        setIsSessionActive(true);
-        startPulseAnimation();
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      pc.ontrack = (e) => {
+        audioEl.srcObject = e.streams[0];
       };
 
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          
-          if (data.type === "response.audio.delta") {
-            setStatus("speaking");
-          } else if (data.type === "response.done") {
-            setStatus("listening");
-          } else if (data.type === "input_audio_buffer.speech_started") {
-            setStatus("listening");
-          }
-        } catch (e) {
-          console.error("Error parsing WebSocket message:", e);
+      // Get local audio stream
+      const ms = await navigator.mediaDevices.getUserMedia({ audio: true });
+      ms.getTracks().forEach((track) => pc.addTrack(track, ms));
+
+      // Create offer
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      // Step 3: Exchange SDP with OpenAI Realtime API (GA endpoint)
+      const sdpResponse = await fetch("https://api.openai.com/v1/realtime/calls", {
+        method: "POST",
+        body: offer.sdp,
+        headers: {
+          Authorization: `Bearer ${client_secret}`,
+          "Content-Type": "application/sdp",
+        },
+      });
+
+      if (!sdpResponse.ok) {
+        const errorText = await sdpResponse.text();
+        console.error("WebRTC error:", errorText);
+        throw new Error("Failed to establish WebRTC connection");
+      }
+
+      const answerSdp = await sdpResponse.text();
+      await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
+
+      // Connection established
+      setStatus("listening");
+      setIsSessionActive(true);
+      startPulseAnimation();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      // Monitor connection state
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
+          setIsSessionActive(false);
+          setStatus("error");
+          stopPulseAnimation();
         }
       };
 
-      ws.onerror = (error) => {
-        console.error("WebSocket error:", error);
-        setStatus("error");
-        stopPulseAnimation();
-      };
-
-      ws.onclose = () => {
-        setIsSessionActive(false);
-        setStatus("idle");
-        stopPulseAnimation();
-      };
-
-      wsRef.current = ws;
     } catch (error) {
       console.error("Connection error:", error);
       setStatus("error");
@@ -177,43 +203,26 @@ export default function SessionScreen() {
     }
   }, [story, startPulseAnimation, stopPulseAnimation]);
 
-  const handleTalkPress = async () => {
-    if (!permission?.granted) {
-      if (permission?.canAskAgain) {
-        const result = await requestPermission();
-        if (!result.granted) {
-          return;
-        }
-      } else {
-        Alert.alert(
-          "Microphone Access Required",
-          "Story Buddy needs microphone access to hear your voice. Please enable it in Settings.",
-          [
-            { text: "Cancel", style: "cancel" },
-            ...(Platform.OS !== "web"
-              ? [
-                  {
-                    text: "Open Settings",
-                    onPress: async () => {
-                      try {
-                        await Linking.openSettings();
-                      } catch (e) {
-                        // Settings not available
-                      }
-                    },
-                  },
-                ]
-              : []),
-          ]
-        );
-        return;
-      }
-    }
+  const connectToRealtimeNative = useCallback(async () => {
+    // For native mobile, show a message that this feature works best on web
+    // In a production app, you would implement react-native-webrtc or use a WebSocket fallback
+    Alert.alert(
+      "Voice Chat",
+      "For the best voice experience, please use Story Buddy in a web browser. Scan the QR code and choose 'Open in browser' instead of Expo Go.",
+      [{ text: "OK", onPress: () => setStatus("idle") }]
+    );
+    setStatus("idle");
+  }, []);
 
+  const handleTalkPress = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     if (!isSessionActive) {
-      await connectToRealtime();
+      if (Platform.OS === "web") {
+        await connectToRealtimeWeb();
+      } else {
+        await connectToRealtimeNative();
+      }
     }
   };
 
@@ -233,8 +242,8 @@ export default function SessionScreen() {
         text: "Stop",
         style: "destructive",
         onPress: () => {
-          if (wsRef.current) {
-            wsRef.current.close();
+          if (pcRef.current) {
+            pcRef.current.close();
           }
           navigation.goBack();
         },
@@ -244,8 +253,8 @@ export default function SessionScreen() {
 
   const handleStartAgain = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (wsRef.current) {
-      wsRef.current.close();
+    if (pcRef.current) {
+      pcRef.current.close();
     }
     navigation.replace("StorySelection");
   };
@@ -279,67 +288,6 @@ export default function SessionScreen() {
         return [StoryBuddyColors.primary, "#FF8FB3"];
     }
   };
-
-  if (!permission) {
-    return (
-      <LinearGradient
-        colors={["#E8DEFF", "#F8F5FF", "#FFE8F0"]}
-        style={styles.container}
-      >
-        <View style={styles.loadingContainer}>
-          <ThemedText style={styles.statusText}>Loading...</ThemedText>
-        </View>
-      </LinearGradient>
-    );
-  }
-
-  if (!permission.granted && !permission.canAskAgain) {
-    return (
-      <LinearGradient
-        colors={["#E8DEFF", "#F8F5FF", "#FFE8F0"]}
-        style={styles.container}
-      >
-        <View
-          style={[
-            styles.permissionContainer,
-            {
-              paddingTop: headerHeight + Spacing.xl,
-              paddingBottom: insets.bottom + Spacing["2xl"],
-            },
-          ]}
-        >
-          <Feather
-            name="mic-off"
-            size={64}
-            color={StoryBuddyColors.textSecondary}
-          />
-          <ThemedText style={styles.permissionTitle}>
-            Microphone Access Required
-          </ThemedText>
-          <ThemedText style={styles.permissionText}>
-            Story Buddy needs to hear your voice to tell you stories. Please
-            enable microphone access in Settings.
-          </ThemedText>
-          {Platform.OS !== "web" ? (
-            <Pressable
-              style={styles.settingsButton}
-              onPress={async () => {
-                try {
-                  await Linking.openSettings();
-                } catch (e) {
-                  // Settings not available
-                }
-              }}
-            >
-              <ThemedText style={styles.settingsButtonText}>
-                Open Settings
-              </ThemedText>
-            </Pressable>
-          ) : null}
-        </View>
-      </LinearGradient>
-    );
-  }
 
   return (
     <LinearGradient
@@ -418,43 +366,6 @@ export default function SessionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  permissionContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: Spacing["3xl"],
-    gap: Spacing.lg,
-  },
-  permissionTitle: {
-    fontSize: 22,
-    fontWeight: "600",
-    color: StoryBuddyColors.textPrimary,
-    textAlign: "center",
-    marginTop: Spacing.lg,
-  },
-  permissionText: {
-    fontSize: 16,
-    color: StoryBuddyColors.textSecondary,
-    textAlign: "center",
-    lineHeight: 24,
-  },
-  settingsButton: {
-    marginTop: Spacing.lg,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing["2xl"],
-    backgroundColor: StoryBuddyColors.primary,
-    borderRadius: BorderRadius.lg,
-  },
-  settingsButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
   },
   content: {
     flex: 1,
