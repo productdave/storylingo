@@ -138,42 +138,38 @@ export default function SessionScreen() {
         audioEl.srcObject = e.streams[0];
       };
 
-      // Listen for data channel from OpenAI (they create it, we listen)
-      pc.ondatachannel = (event) => {
-        const dc = event.channel;
-        console.log("Data channel received:", dc.label);
-        
-        dc.onopen = () => {
-          console.log("Data channel opened");
-        };
-        dc.onmessage = (msgEvent) => {
-          try {
-            const data = JSON.parse(msgEvent.data);
-            console.log("OpenAI event:", data.type);
-            
-            // Update status based on server events
-            if (data.type === "response.audio.delta" || data.type === "response.audio_transcript.delta") {
-              setStatus("speaking");
-            } else if (data.type === "response.done" || data.type === "input_audio_buffer.speech_started") {
-              setStatus("listening");
-            } else if (data.type === "session.created") {
-              console.log("Session created successfully");
-            } else if (data.type === "error") {
-              console.error("OpenAI error:", data.error);
-            }
-          } catch (e) {
-            // Non-JSON message, ignore
+      // Create data channel for events BEFORE creating SDP offer
+      const dc = pc.createDataChannel("oai-events");
+      dc.onopen = () => {
+        console.log("Data channel opened");
+      };
+      dc.onmessage = (msgEvent) => {
+        try {
+          const data = JSON.parse(msgEvent.data);
+          console.log("OpenAI event:", data.type);
+          
+          // Update status based on server events
+          if (data.type === "response.audio.delta" || data.type === "response.audio_transcript.delta") {
+            setStatus("speaking");
+          } else if (data.type === "response.done" || data.type === "input_audio_buffer.speech_started") {
+            setStatus("listening");
+          } else if (data.type === "session.created") {
+            console.log("Session created successfully");
+          } else if (data.type === "error") {
+            console.error("OpenAI error:", data.error);
           }
-        };
-        dc.onerror = (error) => {
-          console.error("Data channel error:", error);
-        };
-        dc.onclose = () => {
-          console.log("Data channel closed");
-          setIsSessionActive(false);
-          setStatus("error");
-          stopPulseAnimation();
-        };
+        } catch (e) {
+          // Non-JSON message, ignore
+        }
+      };
+      dc.onerror = (error) => {
+        console.error("Data channel error:", error);
+      };
+      dc.onclose = () => {
+        console.log("Data channel closed");
+        setIsSessionActive(false);
+        setStatus("error");
+        stopPulseAnimation();
       };
 
       // Monitor connection state
