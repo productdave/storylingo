@@ -96,6 +96,11 @@ export default function StorySelectionScreen() {
     navigation.navigate("Settings");
   };
 
+  const handleUpgrade = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    navigation.navigate("Paywall", { fromTrialPrompt: false });
+  };
+
   const selectLanguage = (lang: Language) => {
     if (lang !== language) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -124,9 +129,16 @@ export default function StorySelectionScreen() {
     >
       <View style={[styles.headerRow, { paddingTop: headerHeight + Spacing.md }]}>
         {trialStatusText ? (
-          <View style={styles.trialBadge}>
-            <Feather name="star" size={12} color={StoryBuddyColors.primary} />
-            <Text style={styles.trialBadgeText}>{trialStatusText}</Text>
+          <View style={styles.trialSection}>
+            <View style={styles.trialBadge}>
+              <Feather name="star" size={12} color={StoryBuddyColors.primary} />
+              <Text style={styles.trialBadgeText}>{trialStatusText}</Text>
+            </View>
+            {status === 'trial' ? (
+              <Pressable style={styles.upgradeButton} onPress={handleUpgrade}>
+                <Text style={styles.upgradeButtonText}>Upgrade</Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : (
           <View style={styles.trialBadgePlaceholder} />
@@ -216,6 +228,22 @@ const styles = StyleSheet.create({
   },
   trialBadgePlaceholder: {
     width: 80,
+  },
+  trialSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  upgradeButton: {
+    backgroundColor: StoryBuddyColors.primary,
+    paddingVertical: 4,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.full,
+  },
+  upgradeButtonText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   settingsButton: {
     padding: Spacing.xs,
