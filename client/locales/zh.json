@@ -60,7 +60,7 @@
   },
   "voiceAgent": {
     "languageInstruction": "请在整个故事会话中使用中文（普通话）。",
-    "initiationMessage": "孩子选择了"{storyTitle}"故事。{languageInstruction} 请先向孩子问好，欢迎他们来到{storyTitle}的故事。",
+    "initiationMessage": "孩子选择了'{storyTitle}'故事。{languageInstruction} 请先向孩子问好，欢迎他们来到{storyTitle}的故事。",
     "pauseMessage": "孩子需要暂停。请确认暂停并等待他们回来。",
     "resumeMessage": "孩子准备好继续了。请从我们停下的地方继续讲故事。"
   }
