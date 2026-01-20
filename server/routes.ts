@@ -17,9 +17,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .join("\n");
 
       // Add language instruction to story context
-      const languageInstruction = language === "zh" 
-        ? "IMPORTANT: Speak only in Chinese (Mandarin) for this entire session. All responses, greetings, questions, and story narration must be in Chinese."
-        : "IMPORTANT: Speak only in English for this entire session. All responses, greetings, questions, and story narration must be in English.";
+      let languageInstruction: string;
+      if (language === "zh") {
+        languageInstruction = "IMPORTANT: Speak only in Chinese (Mandarin) for this entire session. All responses, greetings, questions, and story narration must be in Chinese.";
+      } else if (language === "es") {
+        languageInstruction = "IMPORTANT: Speak only in Spanish for this entire session. All responses, greetings, questions, and story narration must be in Spanish.";
+      } else {
+        languageInstruction = "IMPORTANT: Speak only in English for this entire session. All responses, greetings, questions, and story narration must be in English.";
+      }
       
       const enhancedContext = `${languageInstruction}\n\n${storyContext || `A classic tale of ${storyTitle}`}`;
 
