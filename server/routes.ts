@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "node:http";
+import { getLanguageConfig } from "./languageConfig";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/token - Create an ephemeral client secret for OpenAI Realtime API (GA version)
@@ -11,22 +12,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Missing story information" });
       }
 
+      // Get language-specific configuration
+      const langConfig = getLanguageConfig(language || "en");
+
       // Format story beats as a numbered list string
       const storyBeatsFormatted = macroBeats
         .map((beat: string, i: number) => `${i + 1}. ${beat}`)
         .join("\n");
 
       // Add language instruction to story context
-      let languageInstruction: string;
-      if (language === "zh") {
-        languageInstruction = "IMPORTANT: Speak only in Chinese (Mandarin) for this entire session. All responses, greetings, questions, and story narration must be in Chinese.";
-      } else if (language === "es") {
-        languageInstruction = "IMPORTANT: Speak only in Spanish for this entire session. All responses, greetings, questions, and story narration must be in Spanish.";
-      } else {
-        languageInstruction = "IMPORTANT: Speak only in English for this entire session. All responses, greetings, questions, and story narration must be in English.";
-      }
-      
-      const enhancedContext = `${languageInstruction}\n\n${storyContext || `A classic tale of ${storyTitle}`}`;
+      const enhancedContext = `${langConfig.languageInstruction}\n\n${storyContext || `A classic tale of ${storyTitle}`}`;
 
       // Log the variables being sent
       console.log("=== Token Request ===");
@@ -34,7 +29,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Story Context:", enhancedContext);
       console.log("Story Beats:", storyBeatsFormatted);
       console.log("Language:", language || "en");
-      console.log("Prompt ID:", "pmpt_696e819d09748196a4517a7b3e42c4560613f6be24ce5faa");
+      console.log("Language Config:", langConfig.languageName);
+      console.log("Prompt ID:", langConfig.promptId);
 
       // Create ephemeral client secret using OpenAI's GA Realtime endpoint
       // Uses the user's saved prompt ID from OpenAI dashboard
@@ -52,7 +48,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               type: "realtime",
               model: "gpt-realtime",
               prompt: {
-                id: "pmpt_696e819d09748196a4517a7b3e42c4560613f6be24ce5faa",
+                id: langConfig.promptId,
                 variables: {
                   story_title: { type: "input_text", text: storyTitle },
                   story_context: { type: "input_text", text: enhancedContext },

@@ -1,0 +1,67 @@
+{
+  "chooseYourStory": "Choose Your Story",
+  "stories": {
+    "snow-white": {
+      "title": "Snow White",
+      "description": "A princess, seven dwarfs, and a magical adventure",
+      "context": "In a faraway kingdom, there lived a beautiful princess named Snow White with skin as white as snow, lips as red as roses, and hair as black as ebony. Her stepmother, the Queen, was the most vain woman in all the land and owned a magic mirror that always told the truth.",
+      "macroBeats": [
+        "Snow White lives with her stepmother the Queen, who is jealous of her beauty",
+        "The Queen orders Snow White sent away; Snow White escapes into the forest",
+        "Snow White discovers the cottage of the seven dwarfs and becomes their friend",
+        "The Queen discovers Snow White is alive and disguises herself",
+        "The Queen tricks Snow White with a poisoned apple; Snow White falls into a deep sleep",
+        "The dwarfs find Snow White asleep and protect her",
+        "A kind prince arrives and wakes Snow White with true love's kindness",
+        "Snow White and her friends live happily ever after; the Queen is defeated"
+      ]
+    },
+    "rapunzel": {
+      "title": "Rapunzel",
+      "description": "A girl with magical hair in a tall tower",
+      "context": "Long ago, a couple longed for a child. When a baby girl was finally born, an enchantress took her away and locked her in a tall tower deep in the forest. The girl was named Rapunzel, and she had the most beautiful, magical golden hair that grew longer and longer with each passing year.",
+      "macroBeats": [
+        "A baby named Rapunzel is taken by an enchantress and locked in a tall tower",
+        "Rapunzel grows up with magical long golden hair; she dreams of seeing the world",
+        "A young prince hears Rapunzel singing and discovers the tower",
+        "The prince visits Rapunzel secretly; they become friends and plan her escape",
+        "The enchantress discovers the prince's visits and sends Rapunzel away",
+        "The prince searches for Rapunzel despite many challenges",
+        "The prince finds Rapunzel; her tears of joy heal him",
+        "Rapunzel and the prince return together; they live happily ever after"
+      ]
+    },
+    "peter-pan": {
+      "title": "Peter Pan",
+      "description": "Fly to Neverland with the boy who never grows up",
+      "context": "In London, the Darling children—Wendy, John, and Michael—were tucked into their nursery beds. Little did they know that a magical boy named Peter Pan, who never grows up, was about to fly through their window and invite them on the adventure of a lifetime to a place called Neverland.",
+      "macroBeats": [
+        "Peter Pan visits the Darling children and invites them to Neverland",
+        "The children learn to fly with fairy dust and travel to Neverland",
+        "They arrive in Neverland and meet the Lost Boys and Tinker Bell",
+        "The children explore Neverland's wonders: mermaids, forests, and adventure",
+        "Captain Hook captures some of the group; a rescue mission begins",
+        "Peter Pan battles Captain Hook to save his friends",
+        "Hook is defeated; the children celebrate their victory",
+        "The Darling children return home safely; Peter Pan remains their friend forever"
+      ]
+    }
+  },
+  "session": {
+    "connecting": "Connecting...",
+    "listening": "Listening...",
+    "speaking": "Speaking...",
+    "paused": "Paused",
+    "muted": "Muted",
+    "connectionLost": "Connection lost",
+    "back": "Back",
+    "mute": "Mute",
+    "unmute": "Unmute"
+  },
+  "voiceAgent": {
+    "languageInstruction": "Please speak in English for the entire story session.",
+    "initiationMessage": "The child has selected the \"{storyTitle}\" story. {languageInstruction} Please begin by saying hello to the child and welcoming them to the {storyTitle} story.",
+    "pauseMessage": "The child needs to pause. Please acknowledge the pause and wait for them to return.",
+    "resumeMessage": "The child is ready to continue. Please resume the story where we left off."
+  }
+}

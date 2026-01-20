@@ -1,0 +1,67 @@
+{
+  "chooseYourStory": "Elige Tu Historia",
+  "stories": {
+    "snow-white": {
+      "title": "Blancanieves",
+      "description": "Una princesa, siete enanitos y una aventura mágica",
+      "context": "En un reino lejano, vivía una hermosa princesa llamada Blancanieves, con piel blanca como la nieve, labios rojos como rosas y cabello negro como el ébano. Su madrastra, la Reina, era la mujer más vanidosa de todo el reino y poseía un espejo mágico que siempre decía la verdad.",
+      "macroBeats": [
+        "Blancanieves vive con su madrastra la Reina, quien está celosa de su belleza",
+        "La Reina ordena que se lleven a Blancanieves; Blancanieves escapa al bosque",
+        "Blancanieves descubre la cabaña de los siete enanitos y se hace su amiga",
+        "La Reina descubre que Blancanieves está viva y se disfraza",
+        "La Reina engaña a Blancanieves con una manzana envenenada; Blancanieves cae en un sueño profundo",
+        "Los enanitos encuentran a Blancanieves dormida y la protegen",
+        "Un príncipe bondadoso llega y despierta a Blancanieves con la bondad del amor verdadero",
+        "Blancanieves y sus amigos viven felices para siempre; la Reina es derrotada"
+      ]
+    },
+    "rapunzel": {
+      "title": "Rapunzel",
+      "description": "Una niña con cabello mágico en una torre alta",
+      "context": "Hace mucho tiempo, una pareja anhelaba tener un hijo. Cuando finalmente nació una niña, una hechicera se la llevó y la encerró en una torre alta en lo profundo del bosque. La niña se llamaba Rapunzel, y tenía el cabello dorado más hermoso y mágico que crecía más y más largo con cada año que pasaba.",
+      "macroBeats": [
+        "Una bebé llamada Rapunzel es llevada por una hechicera y encerrada en una torre alta",
+        "Rapunzel crece con un cabello dorado largo y mágico; sueña con ver el mundo",
+        "Un joven príncipe escucha a Rapunzel cantar y descubre la torre",
+        "El príncipe visita a Rapunzel en secreto; se hacen amigos y planean su escape",
+        "La hechicera descubre las visitas del príncipe y envía a Rapunzel lejos",
+        "El príncipe busca a Rapunzel a pesar de muchos desafíos",
+        "El príncipe encuentra a Rapunzel; sus lágrimas de alegría lo sanan",
+        "Rapunzel y el príncipe regresan juntos; viven felices para siempre"
+      ]
+    },
+    "peter-pan": {
+      "title": "Peter Pan",
+      "description": "Vuela a Nunca Jamás con el niño que nunca crece",
+      "context": "En Londres, los niños Darling—Wendy, John y Michael—estaban arropados en sus camas del cuarto de los niños. No sabían que un niño mágico llamado Peter Pan, que nunca crece, estaba a punto de volar por su ventana e invitarlos a la aventura de sus vidas en un lugar llamado Nunca Jamás.",
+      "macroBeats": [
+        "Peter Pan visita a los niños Darling y los invita a Nunca Jamás",
+        "Los niños aprenden a volar con polvo de hadas y viajan a Nunca Jamás",
+        "Llegan a Nunca Jamás y conocen a los Niños Perdidos y a Campanita",
+        "Los niños exploran las maravillas de Nunca Jamás: sirenas, bosques y aventuras",
+        "El Capitán Garfio captura a algunos del grupo; comienza una misión de rescate",
+        "Peter Pan batalla contra el Capitán Garfio para salvar a sus amigos",
+        "Garfio es derrotado; los niños celebran su victoria",
+        "Los niños Darling regresan a casa sanos y salvos; Peter Pan sigue siendo su amigo para siempre"
+      ]
+    }
+  },
+  "session": {
+    "connecting": "Conectando...",
+    "listening": "Escuchando...",
+    "speaking": "Hablando...",
+    "paused": "Pausado",
+    "muted": "Silenciado",
+    "connectionLost": "Conexión perdida",
+    "back": "Volver",
+    "mute": "Silenciar",
+    "unmute": "Activar sonido"
+  },
+  "voiceAgent": {
+    "languageInstruction": "Por favor, habla en español durante toda la sesión de la historia.",
+    "initiationMessage": "El niño ha seleccionado la historia \"{storyTitle}\". {languageInstruction} Por favor, comienza saludando al niño y dándole la bienvenida a la historia de {storyTitle}.",
+    "pauseMessage": "El niño necesita pausar. Por favor, reconoce la pausa y espera a que regrese.",
+    "resumeMessage": "El niño está listo para continuar. Por favor, retoma la historia donde la dejamos."
+  }
+}

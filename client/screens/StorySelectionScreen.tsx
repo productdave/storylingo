@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React from "react";
 import { View, StyleSheet, ScrollView, Pressable, Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
-import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
@@ -14,10 +14,9 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 
 import { ThemedText } from "@/components/ThemedText";
-import { useTheme } from "@/hooks/useTheme";
 import { Spacing, BorderRadius, StoryBuddyColors } from "@/constants/theme";
 import { STORIES, Story } from "@/constants/stories";
-import { Language, getTranslation } from "@/constants/translations";
+import { useLanguage, getStoryTranslation, Language, TranslationType } from "@/context/LanguageContext";
 import type { RootStackParamList } from "@/navigation/RootStackNavigator";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -26,13 +25,12 @@ interface StoryCardProps {
   story: Story;
   index: number;
   onPress: () => void;
-  language: Language;
+  t: TranslationType;
 }
 
-function StoryCard({ story, index, onPress, language }: StoryCardProps) {
+function StoryCard({ story, index, onPress, t }: StoryCardProps) {
   const scale = useSharedValue(1);
-  const t = getTranslation(language);
-  const storyTranslation = t.stories[story.id as keyof typeof t.stories];
+  const storyTranslation = getStoryTranslation(t, story.id);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -78,15 +76,13 @@ function StoryCard({ story, index, onPress, language }: StoryCardProps) {
 export default function StorySelectionScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
-  const { theme } = useTheme();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   
-  const [language, setLanguage] = useState<Language>("en");
-  const t = getTranslation(language);
+  const { language, setLanguage, t } = useLanguage();
 
   const handleSelectStory = (story: Story) => {
-    navigation.navigate("Session", { story, language });
+    navigation.navigate("Session", { story });
   };
 
   const selectLanguage = (lang: Language) => {
@@ -148,7 +144,7 @@ export default function StorySelectionScreen() {
             story={story}
             index={index}
             onPress={() => handleSelectStory(story)}
-            language={language}
+            t={t}
           />
         ))}
       </ScrollView>

@@ -29,7 +29,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { Spacing, BorderRadius, StoryBuddyColors } from "@/constants/theme";
 import type { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { getApiUrl } from "@/lib/query-client";
-import { getTranslation } from "@/constants/translations";
+import { useLanguage, getStoryTranslation } from "@/context/LanguageContext";
 
 type SessionStatus =
   | "idle"
@@ -46,8 +46,8 @@ export default function SessionScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "Session">>();
-  const { story, language } = route.params;
-  const t = getTranslation(language);
+  const { story } = route.params;
+  const { language, t } = useLanguage();
 
   const [status, setStatus] = useState<SessionStatus>("idle");
   const [isSessionActive, setIsSessionActive] = useState(false);
@@ -162,16 +162,11 @@ export default function SessionScreen() {
         
         // Automatically initiate the story by sending a message to the AI
         // This tells the AI which story was selected, language preference, and to greet the child
-        let languageInstruction: string;
-        if (language === "zh") {
-          languageInstruction = "Please speak in Chinese (Mandarin) for the entire story session.";
-        } else if (language === "es") {
-          languageInstruction = "Please speak in Spanish for the entire story session.";
-        } else {
-          languageInstruction = "Please speak in English for the entire story session.";
-        }
-        const storyTranslation = t.stories[story.id as keyof typeof t.stories];
-        const initiationMessage = `The child has selected the "${storyTranslation.title}" story. ${languageInstruction} Please begin by saying hello to the child and welcoming them to the ${storyTranslation.title} story.`;
+        const storyTranslation = getStoryTranslation(t, story.id);
+        const languageInstruction = t.voiceAgent.languageInstruction;
+        const initiationMessage = t.voiceAgent.initiationMessage
+          .replace(/{storyTitle}/g, storyTranslation.title)
+          .replace(/{languageInstruction}/g, languageInstruction);
         
         // Send a conversation item with the story initiation
         const createItemEvent = {
@@ -336,12 +331,12 @@ export default function SessionScreen() {
     if (isSessionActive) {
       if (isPaused) {
         // Resume the story
-        sendMessageToAI("The child is ready to continue. Please resume the story where we left off.");
+        sendMessageToAI(t.voiceAgent.resumeMessage);
         setIsPaused(false);
         startPulseAnimation();
       } else {
         // Pause the story
-        sendMessageToAI("The child needs to pause. Please acknowledge the pause and wait for them to return.");
+        sendMessageToAI(t.voiceAgent.pauseMessage);
         setIsPaused(true);
         stopPulseAnimation();
       }
