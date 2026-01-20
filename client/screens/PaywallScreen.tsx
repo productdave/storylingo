@@ -19,6 +19,7 @@ import { StoryBuddyColors, Spacing, BorderRadius, Typography } from '@/constants
 import type { RootStackParamList } from '@/navigation/RootStackNavigator';
 
 type PaywallRouteProp = RouteProp<RootStackParamList, 'Paywall'>;
+type PaywallNavProp = NativeStackNavigationProp<RootStackParamList, 'Paywall'>;
 
 const PLANS = [
   {
@@ -49,12 +50,13 @@ export default function PaywallScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<PaywallRouteProp>();
-  const { startTrial, subscribe } = useSubscription();
+  const { startTrial, subscribe, isTrialExpired } = useSubscription();
   
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('annual');
   const [isLoading, setIsLoading] = useState(false);
 
   const fromTrialPrompt = route.params?.fromTrialPrompt ?? false;
+  const canDismiss = !isTrialExpired;
 
   const handleSelectPlan = (planId: 'monthly' | 'annual') => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -90,6 +92,7 @@ export default function PaywallScreen() {
   };
 
   const handleClose = () => {
+    if (!canDismiss) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     navigation.goBack();
   };
@@ -112,17 +115,23 @@ export default function PaywallScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Pressable style={styles.closeButton} onPress={handleClose}>
-          <Feather name="x" size={24} color={StoryBuddyColors.textSecondary} />
-        </Pressable>
+        {canDismiss ? (
+          <Pressable style={styles.closeButton} onPress={handleClose}>
+            <Feather name="x" size={24} color={StoryBuddyColors.textSecondary} />
+          </Pressable>
+        ) : null}
 
         <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.header}>
           <View style={styles.iconContainer}>
-            <Feather name="star" size={48} color={StoryBuddyColors.primary} />
+            <Feather name={isTrialExpired ? "clock" : "star"} size={48} color={StoryBuddyColors.primary} />
           </View>
-          <Text style={styles.title}>Unlock Magical Stories</Text>
+          <Text style={styles.title}>
+            {isTrialExpired ? "Your Trial Has Ended" : "Unlock Magical Stories"}
+          </Text>
           <Text style={styles.subtitle}>
-            Start your free 7-day trial and discover unlimited adventures
+            {isTrialExpired 
+              ? "Subscribe now to continue enjoying unlimited magical stories" 
+              : "Start your free 7-day trial and discover unlimited adventures"}
           </Text>
         </Animated.View>
 
@@ -181,18 +190,22 @@ export default function PaywallScreen() {
         <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.ctaContainer}>
           <Pressable
             style={[styles.ctaButton, isLoading && styles.ctaButtonDisabled]}
-            onPress={handleStartTrial}
+            onPress={isTrialExpired ? handleSubscribe : handleStartTrial}
             disabled={isLoading}
           >
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.ctaText}>Start Free 7-Day Trial</Text>
+              <Text style={styles.ctaText}>
+                {isTrialExpired ? "Subscribe Now" : "Start Free 7-Day Trial"}
+              </Text>
             )}
           </Pressable>
           
           <Text style={styles.ctaSubtext}>
-            Then {selectedPlan === 'annual' ? '$99/year' : '$9.99/month'}. Cancel anytime.
+            {isTrialExpired 
+              ? `${selectedPlan === 'annual' ? '$99/year' : '$9.99/month'}. Cancel anytime.`
+              : `Then ${selectedPlan === 'annual' ? '$99/year' : '$9.99/month'}. Cancel anytime.`}
           </Text>
 
           <Pressable onPress={handleRestore} style={styles.restoreButton}>

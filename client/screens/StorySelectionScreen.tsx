@@ -81,9 +81,13 @@ export default function StorySelectionScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   
   const { language, setLanguage, t } = useLanguage();
-  const { status, trialDaysRemaining, hasActiveSubscription } = useSubscription();
+  const { status, trialDaysRemaining, hasActiveSubscription, isTrialExpired } = useSubscription();
 
   const handleSelectStory = (story: Story) => {
+    if (isTrialExpired) {
+      navigation.navigate("Paywall", { fromTrialPrompt: false });
+      return;
+    }
     navigation.navigate("Session", { story });
   };
 
