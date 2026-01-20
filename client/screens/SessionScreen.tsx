@@ -6,6 +6,8 @@ import {
   Alert,
   Platform,
   Linking,
+  Modal,
+  Text,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
@@ -26,10 +28,11 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 
 import { ThemedText } from "@/components/ThemedText";
-import { Spacing, BorderRadius, StoryBuddyColors } from "@/constants/theme";
+import { Spacing, BorderRadius, StoryBuddyColors, Typography } from "@/constants/theme";
 import type { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { getApiUrl } from "@/lib/query-client";
 import { useLanguage, getStoryTranslation } from "@/context/LanguageContext";
+import { useSubscription } from "@/context/SubscriptionContext";
 
 type SessionStatus =
   | "idle"
@@ -40,6 +43,57 @@ type SessionStatus =
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
+function TrialPromptModal({ visible, onStartTrial, onDismiss }: { 
+  visible: boolean; 
+  onStartTrial: () => void; 
+  onDismiss: () => void;
+}) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onDismiss}
+    >
+      <View style={modalStyles.overlay}>
+        <View style={modalStyles.content}>
+          <View style={modalStyles.iconContainer}>
+            <Feather name="gift" size={40} color={StoryBuddyColors.primary} />
+          </View>
+          
+          <Text style={modalStyles.title}>Enjoying the Story?</Text>
+          <Text style={modalStyles.subtitle}>
+            Start your free 7-day trial to continue enjoying unlimited magical stories!
+          </Text>
+          
+          <View style={modalStyles.features}>
+            <View style={modalStyles.featureRow}>
+              <Feather name="check" size={16} color={StoryBuddyColors.success} />
+              <Text style={modalStyles.featureText}>Unlimited stories</Text>
+            </View>
+            <View style={modalStyles.featureRow}>
+              <Feather name="check" size={16} color={StoryBuddyColors.success} />
+              <Text style={modalStyles.featureText}>All story collections</Text>
+            </View>
+            <View style={modalStyles.featureRow}>
+              <Feather name="check" size={16} color={StoryBuddyColors.success} />
+              <Text style={modalStyles.featureText}>Cancel anytime</Text>
+            </View>
+          </View>
+          
+          <Pressable style={modalStyles.button} onPress={onStartTrial}>
+            <Text style={modalStyles.buttonText}>Start 7-Day Free Trial</Text>
+          </Pressable>
+          
+          <Pressable style={modalStyles.dismissButton} onPress={onDismiss}>
+            <Text style={modalStyles.dismissText}>Maybe Later</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function SessionScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
@@ -48,11 +102,22 @@ export default function SessionScreen() {
   const route = useRoute<RouteProp<RootStackParamList, "Session">>();
   const { story } = route.params;
   const { language, t } = useLanguage();
+  const { 
+    hasActiveSubscription, 
+    shouldShowTrialPrompt, 
+    addListenTime, 
+    startTrial, 
+    markTrialPromptSeen 
+  } = useSubscription();
 
   const [status, setStatus] = useState<SessionStatus>("idle");
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [showTrialPrompt, setShowTrialPrompt] = useState(false);
+
+  const listenTimeRef = useRef(0);
+  const listenIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const pcRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -75,8 +140,44 @@ export default function SessionScreen() {
       if (pcRef.current) {
         pcRef.current.close();
       }
+      if (listenIntervalRef.current) {
+        clearInterval(listenIntervalRef.current);
+      }
     };
   }, []);
+
+  // Track listen time when session is active
+  useEffect(() => {
+    if (isSessionActive && !isPaused && !hasActiveSubscription) {
+      listenIntervalRef.current = setInterval(() => {
+        listenTimeRef.current += 1;
+        
+        // Check every 10 seconds if we should show the trial prompt
+        if (listenTimeRef.current % 10 === 0) {
+          addListenTime(10);
+        }
+        
+        // Show trial prompt after 5 minutes (300 seconds) of this session
+        if (listenTimeRef.current >= 300 && shouldShowTrialPrompt()) {
+          setShowTrialPrompt(true);
+          if (listenIntervalRef.current) {
+            clearInterval(listenIntervalRef.current);
+          }
+        }
+      }, 1000);
+    } else {
+      if (listenIntervalRef.current) {
+        clearInterval(listenIntervalRef.current);
+        listenIntervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (listenIntervalRef.current) {
+        clearInterval(listenIntervalRef.current);
+      }
+    };
+  }, [isSessionActive, isPaused, hasActiveSubscription]);
 
   const startPulseAnimation = useCallback(() => {
     pulseScale.value = withRepeat(
@@ -394,6 +495,19 @@ export default function SessionScreen() {
     navigation.replace("StorySelection");
   };
 
+  const handleStartTrial = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShowTrialPrompt(false);
+    await startTrial();
+    navigation.navigate("SubscriptionSuccess", { plan: 'trial' });
+  };
+
+  const handleDismissTrialPrompt = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShowTrialPrompt(false);
+    await markTrialPromptSeen();
+  };
+
   const getStatusText = () => {
     // Show paused status when paused
     if (isPaused && isSessionActive) {
@@ -524,9 +638,89 @@ export default function SessionScreen() {
           </Pressable>
         </View>
       </View>
+
+      <TrialPromptModal
+        visible={showTrialPrompt}
+        onStartTrial={handleStartTrial}
+        onDismiss={handleDismissTrialPrompt}
+      />
     </LinearGradient>
   );
 }
+
+const modalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: Spacing.xl,
+  },
+  content: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    width: "100%",
+    maxWidth: 340,
+    alignItems: "center",
+  },
+  iconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "rgba(255, 107, 157, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing.lg,
+  },
+  title: {
+    ...Typography.h3,
+    color: StoryBuddyColors.textPrimary,
+    textAlign: "center",
+    marginBottom: Spacing.sm,
+  },
+  subtitle: {
+    ...Typography.body,
+    color: StoryBuddyColors.textSecondary,
+    textAlign: "center",
+    marginBottom: Spacing.xl,
+  },
+  features: {
+    alignSelf: "stretch",
+    marginBottom: Spacing.xl,
+  },
+  featureRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    paddingVertical: Spacing.xs,
+  },
+  featureText: {
+    ...Typography.body,
+    color: StoryBuddyColors.textPrimary,
+  },
+  button: {
+    backgroundColor: StoryBuddyColors.primary,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing["3xl"],
+    borderRadius: BorderRadius.xl,
+    width: "100%",
+    alignItems: "center",
+    marginBottom: Spacing.md,
+  },
+  buttonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+  dismissButton: {
+    padding: Spacing.sm,
+  },
+  dismissText: {
+    ...Typography.body,
+    color: StoryBuddyColors.textSecondary,
+  },
+});
 
 const styles = StyleSheet.create({
   container: {

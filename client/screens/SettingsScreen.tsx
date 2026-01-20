@@ -24,7 +24,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { status, trialDaysRemaining, hasActiveSubscription, restorePurchases, cancelSubscription } = useSubscription();
+  const { status, trialDaysRemaining, hasActiveSubscription, restorePurchases } = useSubscription();
 
   const getSubscriptionStatusText = () => {
     switch (status) {
@@ -59,7 +59,7 @@ export default function SettingsScreen() {
         await Linking.openURL('https://apps.apple.com/account/subscriptions');
       } catch (error) {
         Alert.alert(
-          'Open Settings',
+          'Manage Subscription',
           'Go to Settings > Apple ID > Subscriptions to manage your subscription.',
           [{ text: 'OK' }]
         );
@@ -69,7 +69,7 @@ export default function SettingsScreen() {
         await Linking.openURL('https://play.google.com/store/account/subscriptions');
       } catch (error) {
         Alert.alert(
-          'Open Settings',
+          'Manage Subscription',
           'Go to Google Play Store > Menu > Subscriptions to manage your subscription.',
           [{ text: 'OK' }]
         );
@@ -85,23 +85,6 @@ export default function SettingsScreen() {
       Alert.alert('Success', 'Your purchases have been restored.');
     } else {
       Alert.alert('No Purchases Found', 'We couldn\'t find any previous purchases to restore.');
-    }
-  };
-
-  const handleCancelSubscription = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
-    if (status === 'trial') {
-      Alert.alert(
-        'End Trial Early?',
-        'Are you sure you want to end your free trial? You\'ll lose access to all premium features.',
-        [
-          { text: 'Keep Trial', style: 'cancel' },
-          { text: 'End Trial', style: 'destructive', onPress: cancelSubscription },
-        ]
-      );
-    } else {
-      handleManageSubscription();
     }
   };
 
@@ -140,7 +123,7 @@ export default function SettingsScreen() {
             </Pressable>
           ) : null}
 
-          {hasActiveSubscription && status !== 'trial' ? (
+          {hasActiveSubscription ? (
             <Pressable style={styles.manageButton} onPress={handleManageSubscription}>
               <Feather name="external-link" size={18} color={StoryBuddyColors.primary} />
               <Text style={styles.manageButtonText}>Manage Subscription</Text>
@@ -160,20 +143,6 @@ export default function SettingsScreen() {
             </View>
             <Feather name="chevron-right" size={20} color={StoryBuddyColors.textSecondary} />
           </Pressable>
-
-          {hasActiveSubscription ? (
-            <Pressable style={styles.menuItem} onPress={handleCancelSubscription}>
-              <View style={styles.menuItemLeft}>
-                <View style={[styles.menuIconContainer, { backgroundColor: 'rgba(255, 107, 107, 0.1)' }]}>
-                  <Feather name="x-circle" size={20} color={StoryBuddyColors.error} />
-                </View>
-                <Text style={[styles.menuItemText, { color: StoryBuddyColors.error }]}>
-                  {status === 'trial' ? 'End Trial' : 'Cancel Subscription'}
-                </Text>
-              </View>
-              <Feather name="chevron-right" size={20} color={StoryBuddyColors.textSecondary} />
-            </Pressable>
-          ) : null}
         </View>
 
         <View style={styles.section}>

@@ -11,6 +11,7 @@ interface SubscriptionData {
   trialEndDate: string | null;
   subscriptionStartDate: string | null;
   hasSeenTrialPrompt: boolean;
+  totalListenTimeSeconds: number;
 }
 
 interface SubscriptionContextType {
@@ -19,11 +20,13 @@ interface SubscriptionContextType {
   trialDaysRemaining: number;
   hasActiveSubscription: boolean;
   hasSeenTrialPrompt: boolean;
+  totalListenTimeSeconds: number;
   startTrial: () => Promise<void>;
   subscribe: (plan: 'monthly' | 'annual') => Promise<void>;
   restorePurchases: () => Promise<boolean>;
   markTrialPromptSeen: () => Promise<void>;
-  cancelSubscription: () => Promise<void>;
+  addListenTime: (seconds: number) => Promise<void>;
+  shouldShowTrialPrompt: () => boolean;
 }
 
 const defaultData: SubscriptionData = {
@@ -32,6 +35,7 @@ const defaultData: SubscriptionData = {
   trialEndDate: null,
   subscriptionStartDate: null,
   hasSeenTrialPrompt: false,
+  totalListenTimeSeconds: 0,
 };
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -120,12 +124,17 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const cancelSubscription = async () => {
+  const addListenTime = async (seconds: number) => {
     await saveData({
       ...data,
-      status: 'none',
-      subscriptionStartDate: null,
+      totalListenTimeSeconds: data.totalListenTimeSeconds + seconds,
     });
+  };
+
+  const shouldShowTrialPrompt = (): boolean => {
+    if (data.hasSeenTrialPrompt) return false;
+    if (data.status !== 'none') return false;
+    return data.totalListenTimeSeconds >= 300;
   };
 
   const hasActiveSubscription = data.status === 'trial' || data.status === 'monthly' || data.status === 'annual';
@@ -138,11 +147,13 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         trialDaysRemaining: calculateTrialDaysRemaining(),
         hasActiveSubscription,
         hasSeenTrialPrompt: data.hasSeenTrialPrompt,
+        totalListenTimeSeconds: data.totalListenTimeSeconds,
         startTrial,
         subscribe,
         restorePurchases,
         markTrialPromptSeen,
-        cancelSubscription,
+        addListenTime,
+        shouldShowTrialPrompt,
       }}
     >
       {children}
