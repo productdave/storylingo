@@ -12,6 +12,7 @@ interface SubscriptionData {
   subscriptionStartDate: string | null;
   hasSeenTrialPrompt: boolean;
   totalListenTimeSeconds: number;
+  trialWasUsed: boolean;
 }
 
 interface SubscriptionContextType {
@@ -21,6 +22,7 @@ interface SubscriptionContextType {
   hasActiveSubscription: boolean;
   hasSeenTrialPrompt: boolean;
   totalListenTimeSeconds: number;
+  isTrialExpired: boolean;
   startTrial: () => Promise<void>;
   subscribe: (plan: 'monthly' | 'annual') => Promise<void>;
   restorePurchases: () => Promise<boolean>;
@@ -36,6 +38,7 @@ const defaultData: SubscriptionData = {
   subscriptionStartDate: null,
   hasSeenTrialPrompt: false,
   totalListenTimeSeconds: 0,
+  trialWasUsed: false,
 };
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -71,7 +74,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       const now = new Date();
       const endDate = new Date(subscriptionData.trialEndDate);
       if (now > endDate) {
-        return { ...subscriptionData, status: 'none' };
+        return { ...subscriptionData, status: 'none', trialWasUsed: true };
       }
     }
     return subscriptionData;
@@ -101,6 +104,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       trialStartDate: now.toISOString(),
       trialEndDate: trialEnd.toISOString(),
       hasSeenTrialPrompt: true,
+      trialWasUsed: true,
     });
   };
 
@@ -134,10 +138,12 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const shouldShowTrialPrompt = (): boolean => {
     if (data.hasSeenTrialPrompt) return false;
     if (data.status !== 'none') return false;
-    return data.totalListenTimeSeconds >= 300;
+    return data.totalListenTimeSeconds >= 10; // Change to 300 for 5 minutes
   };
 
   const hasActiveSubscription = data.status === 'trial' || data.status === 'monthly' || data.status === 'annual';
+  
+  const isTrialExpired = data.trialWasUsed && data.status === 'none';
 
   return (
     <SubscriptionContext.Provider
@@ -148,6 +154,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         hasActiveSubscription,
         hasSeenTrialPrompt: data.hasSeenTrialPrompt,
         totalListenTimeSeconds: data.totalListenTimeSeconds,
+        isTrialExpired,
         startTrial,
         subscribe,
         restorePurchases,

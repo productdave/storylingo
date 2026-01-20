@@ -157,8 +157,8 @@ export default function SessionScreen() {
           addListenTime(10);
         }
         
-        // Show trial prompt after 5 minutes (300 seconds) of this session
-        if (listenTimeRef.current >= 300 && shouldShowTrialPrompt()) {
+        // Show trial prompt after 10 seconds of this session (change to 300 for 5 minutes)
+        if (listenTimeRef.current >= 10 && shouldShowTrialPrompt()) {
           setShowTrialPrompt(true);
           if (listenIntervalRef.current) {
             clearInterval(listenIntervalRef.current);
