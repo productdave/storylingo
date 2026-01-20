@@ -5,12 +5,11 @@ import HomeScreen from "@/screens/HomeScreen";
 import StorySelectionScreen from "@/screens/StorySelectionScreen";
 import SessionScreen from "@/screens/SessionScreen";
 import type { Story } from "@/constants/stories";
-import type { Language } from "@/constants/translations";
 
 export type RootStackParamList = {
   Home: undefined;
   StorySelection: undefined;
-  Session: { story: Story; language: Language };
+  Session: { story: Story };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
