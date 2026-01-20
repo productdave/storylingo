@@ -1,4 +1,4 @@
-export type Language = "en" | "zh";
+export type Language = "en" | "zh" | "es";
 
 export const translations = {
   en: {
@@ -55,6 +55,34 @@ export const translations = {
       back: "返回",
       mute: "静音",
       unmute: "取消静音",
+    },
+  },
+  es: {
+    chooseYourStory: "Elige Tu Historia",
+    stories: {
+      "snow-white": {
+        title: "Blancanieves",
+        description: "Una princesa, siete enanitos y una aventura mágica",
+      },
+      rapunzel: {
+        title: "Rapunzel",
+        description: "Una niña con cabello mágico en una torre alta",
+      },
+      "peter-pan": {
+        title: "Peter Pan",
+        description: "Vuela a Nunca Jamás con el niño que nunca crece",
+      },
+    },
+    session: {
+      connecting: "Conectando...",
+      listening: "Escuchando...",
+      speaking: "Hablando...",
+      paused: "Pausado",
+      muted: "Silenciado",
+      connectionLost: "Conexión perdida",
+      back: "Volver",
+      mute: "Silenciar",
+      unmute: "Activar sonido",
     },
   },
 };

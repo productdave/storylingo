@@ -89,9 +89,11 @@ export default function StorySelectionScreen() {
     navigation.navigate("Session", { story, language });
   };
 
-  const toggleLanguage = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setLanguage(language === "en" ? "zh" : "en");
+  const selectLanguage = (lang: Language) => {
+    if (lang !== language) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setLanguage(lang);
+    }
   };
 
   return (
@@ -102,22 +104,32 @@ export default function StorySelectionScreen() {
       style={styles.container}
     >
       <View style={[styles.languageToggleContainer, { paddingTop: headerHeight + Spacing.md }]}>
-        <Pressable
-          style={styles.languageToggle}
-          onPress={toggleLanguage}
-          testID="button-language-toggle"
-        >
-          <View style={[styles.languageOption, language === "en" ? styles.languageOptionActive : null]}>
+        <View style={styles.languageToggle} testID="button-language-toggle">
+          <Pressable
+            style={[styles.languageOption, language === "en" ? styles.languageOptionActive : null]}
+            onPress={() => selectLanguage("en")}
+          >
             <ThemedText style={[styles.languageText, language === "en" ? styles.languageTextActive : null]}>
               EN
             </ThemedText>
-          </View>
-          <View style={[styles.languageOption, language === "zh" ? styles.languageOptionActive : null]}>
+          </Pressable>
+          <Pressable
+            style={[styles.languageOption, language === "zh" ? styles.languageOptionActive : null]}
+            onPress={() => selectLanguage("zh")}
+          >
             <ThemedText style={[styles.languageText, language === "zh" ? styles.languageTextActive : null]}>
               中文
             </ThemedText>
-          </View>
-        </Pressable>
+          </Pressable>
+          <Pressable
+            style={[styles.languageOption, language === "es" ? styles.languageOptionActive : null]}
+            onPress={() => selectLanguage("es")}
+          >
+            <ThemedText style={[styles.languageText, language === "es" ? styles.languageTextActive : null]}>
+              ES
+            </ThemedText>
+          </Pressable>
+        </View>
       </View>
       <ScrollView
         style={styles.scrollView}

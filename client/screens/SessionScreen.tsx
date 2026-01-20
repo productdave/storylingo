@@ -162,9 +162,14 @@ export default function SessionScreen() {
         
         // Automatically initiate the story by sending a message to the AI
         // This tells the AI which story was selected, language preference, and to greet the child
-        const languageInstruction = language === "zh" 
-          ? "Please speak in Chinese (Mandarin) for the entire story session."
-          : "Please speak in English for the entire story session.";
+        let languageInstruction: string;
+        if (language === "zh") {
+          languageInstruction = "Please speak in Chinese (Mandarin) for the entire story session.";
+        } else if (language === "es") {
+          languageInstruction = "Please speak in Spanish for the entire story session.";
+        } else {
+          languageInstruction = "Please speak in English for the entire story session.";
+        }
         const storyTranslation = t.stories[story.id as keyof typeof t.stories];
         const initiationMessage = `The child has selected the "${storyTranslation.title}" story. ${languageInstruction} Please begin by saying hello to the child and welcoming them to the ${storyTranslation.title} story.`;
         
