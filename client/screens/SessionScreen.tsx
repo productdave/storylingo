@@ -146,9 +146,10 @@ export default function SessionScreen() {
     };
   }, []);
 
-  // Track listen time when session is active
+  // Track listen time when connecting or session is active (for subscription testing)
   useEffect(() => {
-    if (isSessionActive && !isPaused && !hasActiveSubscription) {
+    const isTracking = (status === 'connecting' || isSessionActive) && !isPaused && !hasActiveSubscription;
+    if (isTracking) {
       listenIntervalRef.current = setInterval(() => {
         listenTimeRef.current += 1;
         
@@ -177,7 +178,7 @@ export default function SessionScreen() {
         clearInterval(listenIntervalRef.current);
       }
     };
-  }, [isSessionActive, isPaused, hasActiveSubscription]);
+  }, [status, isSessionActive, isPaused, hasActiveSubscription]);
 
   const startPulseAnimation = useCallback(() => {
     pulseScale.value = withRepeat(
