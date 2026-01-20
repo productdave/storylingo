@@ -169,6 +169,7 @@ function configureExpoAndLanding(app: express.Application) {
   );
   const landingPageTemplate = fs.readFileSync(templatePath, "utf-8");
   const appName = getAppName();
+  const webDistPath = path.resolve(process.cwd(), "dist");
 
   log("Serving static Expo files with dynamic manifest routing");
 
@@ -187,6 +188,12 @@ function configureExpoAndLanding(app: express.Application) {
     }
 
     if (req.path === "/") {
+      // Serve web app directly to browsers
+      const webIndexPath = path.join(webDistPath, "index.html");
+      if (fs.existsSync(webIndexPath)) {
+        return res.sendFile(webIndexPath);
+      }
+      // Fallback to landing page if web build doesn't exist
       return serveLandingPage({
         req,
         res,
@@ -198,6 +205,8 @@ function configureExpoAndLanding(app: express.Application) {
     next();
   });
 
+  // Serve web build assets
+  app.use(express.static(webDistPath));
   app.use("/assets", express.static(path.resolve(process.cwd(), "assets")));
   app.use(express.static(path.resolve(process.cwd(), "static-build")));
 
