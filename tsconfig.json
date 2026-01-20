@@ -3,12 +3,13 @@
   "compilerOptions": {
     "strict": true,
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "paths": {
       "@/*": ["./client/*"],
       "@shared/*": ["./shared/*"]
     },
     "types": ["node"]
   },
-  "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
+  "include": ["**/*.ts", "**/*.tsx", "**/*.json"],
+  "exclude": ["node_modules", "build", "dist", "**/*.test.ts"]
 }
