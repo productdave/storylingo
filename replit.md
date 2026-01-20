@@ -14,20 +14,27 @@ StoryTale uses OpenAI's Realtime API (GA version) to create interactive, voice-b
 
 ```
 ├── client/                 # Expo React Native app
-│   ├── App.tsx            # Root component with font loading
+│   ├── App.tsx            # Root component with font loading and LanguageProvider
 │   ├── screens/
 │   │   ├── HomeScreen.tsx          # Welcome screen with Start button
-│   │   ├── StorySelectionScreen.tsx # Choose a story
+│   │   ├── StorySelectionScreen.tsx # Choose a story + language toggle
 │   │   └── SessionScreen.tsx       # Voice conversation interface
 │   ├── navigation/
 │   │   └── RootStackNavigator.tsx  # Stack navigation
 │   ├── constants/
 │   │   ├── theme.ts       # Colors, spacing, typography
-│   │   └── stories.ts     # Story data and macro beats
+│   │   └── stories.ts     # Story IDs and image mappings
+│   ├── context/
+│   │   └── LanguageContext.tsx     # Global language state with AsyncStorage persistence
+│   ├── locales/           # Translation files (JSON)
+│   │   ├── en.json        # English translations + story content
+│   │   ├── zh.json        # Chinese translations + story content
+│   │   └── es.json        # Spanish translations + story content
 │   └── components/        # Reusable UI components
 ├── server/                # Express.js backend
 │   ├── index.ts          # Server setup
-│   └── routes.ts         # API endpoints including /api/token
+│   ├── routes.ts         # API endpoints including /api/token
+│   └── languageConfig.ts # Language-specific prompt IDs and voice settings
 └── assets/images/        # App icons and story illustrations
 ```
 
@@ -85,8 +92,45 @@ Key configuration:
 - **Web**: Full voice support via WebRTC
 - **Mobile (Expo Go)**: UI works; voice requires web browser due to WebRTC limitations in Expo Go
 
+## Internationalization (i18n) Architecture
+
+The app supports multiple languages with a scalable architecture:
+
+### Client-Side
+- **LanguageContext**: Global state provider wraps entire app
+  - Language preference persists in AsyncStorage (key: `@storytale_language`)
+  - Provides `useTranslation()` hook for components
+  - Includes `t()` function for nested key access (e.g., `t('stories.snow-white.title')`)
+  - Includes `getStory(storyId)` for full story object with localized content
+
+### Translation Files (client/locales/*.json)
+Each language file contains:
+- UI strings (chooseYourStory, session.connecting, etc.)
+- Story content (title, description, context, macroBeats per story)
+- Voice agent messages (initiationMessage, pauseMessage, resumeMessage)
+
+### Server-Side (server/languageConfig.ts)
+- Language-specific prompt IDs (currently same prompt, extensible for per-language prompts)
+- Voice settings per language (alloy for EN, shimmer for ZH, nova for ES)
+- Fallback to English for unsupported languages
+
+### Adding a New Language
+1. Create new JSON file in `client/locales/` (copy from en.json)
+2. Add language config in `server/languageConfig.ts`
+3. Add language option to toggle UI in `StorySelectionScreen.tsx`
+
+### Current Languages
+- English (en) - Default
+- Chinese (zh) - Simplified Mandarin
+- Spanish (es)
+
 ## Recent Changes
 
+- January 20, 2026: Refactored i18n system for scalability
+  - Created LanguageContext with AsyncStorage persistence
+  - Moved translations to JSON files (en.json, zh.json, es.json)
+  - Added Spanish as third language
+  - Server-side languageConfig for voice settings per language
 - January 19, 2026: Initial implementation with OpenAI Realtime API GA
 - Updated to use `/v1/realtime/client_secrets` and `/v1/realtime/calls` endpoints
 - Added WebRTC-based voice connection for web browsers
