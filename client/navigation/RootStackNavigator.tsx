@@ -4,12 +4,18 @@ import { useScreenOptions } from "@/hooks/useScreenOptions";
 import HomeScreen from "@/screens/HomeScreen";
 import StorySelectionScreen from "@/screens/StorySelectionScreen";
 import SessionScreen from "@/screens/SessionScreen";
+import PaywallScreen from "@/screens/PaywallScreen";
+import SubscriptionSuccessScreen from "@/screens/SubscriptionSuccessScreen";
+import SettingsScreen from "@/screens/SettingsScreen";
 import type { Story } from "@/constants/stories";
 
 export type RootStackParamList = {
   Home: undefined;
   StorySelection: undefined;
   Session: { story: Story };
+  Paywall: { fromTrialPrompt?: boolean };
+  SubscriptionSuccess: { plan: 'trial' | 'monthly' | 'annual' };
+  Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -38,6 +44,29 @@ export default function RootStackNavigator() {
         options={({ route }) => ({
           headerTitle: route.params.story.title,
         })}
+      />
+      <Stack.Screen
+        name="Paywall"
+        component={PaywallScreen}
+        options={{
+          headerShown: false,
+          presentation: 'modal',
+        }}
+      />
+      <Stack.Screen
+        name="SubscriptionSuccess"
+        component={SubscriptionSuccessScreen}
+        options={{
+          headerShown: false,
+          gestureEnabled: false,
+        }}
+      />
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{
+          headerTitle: "Settings",
+        }}
       />
     </Stack.Navigator>
   );

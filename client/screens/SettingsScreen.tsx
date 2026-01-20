@@ -1,0 +1,321 @@
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Alert,
+  Linking,
+  Platform,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
+import { Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSubscription } from '@/context/SubscriptionContext';
+import { StoryBuddyColors, Spacing, BorderRadius, Typography } from '@/constants/theme';
+import type { RootStackParamList } from '@/navigation/RootStackNavigator';
+
+export default function SettingsScreen() {
+  const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { status, trialDaysRemaining, hasActiveSubscription, restorePurchases, cancelSubscription } = useSubscription();
+
+  const getSubscriptionStatusText = () => {
+    switch (status) {
+      case 'trial':
+        return `Free Trial (${trialDaysRemaining} days left)`;
+      case 'monthly':
+        return 'Monthly Subscription';
+      case 'annual':
+        return 'Annual Subscription';
+      default:
+        return 'Free Plan';
+    }
+  };
+
+  const getStatusColor = () => {
+    if (hasActiveSubscription) {
+      return StoryBuddyColors.success;
+    }
+    return StoryBuddyColors.textSecondary;
+  };
+
+  const handleUpgrade = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    navigation.navigate('Paywall', { fromTrialPrompt: false });
+  };
+
+  const handleManageSubscription = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    if (Platform.OS === 'ios') {
+      try {
+        await Linking.openURL('https://apps.apple.com/account/subscriptions');
+      } catch (error) {
+        Alert.alert(
+          'Open Settings',
+          'Go to Settings > Apple ID > Subscriptions to manage your subscription.',
+          [{ text: 'OK' }]
+        );
+      }
+    } else {
+      try {
+        await Linking.openURL('https://play.google.com/store/account/subscriptions');
+      } catch (error) {
+        Alert.alert(
+          'Open Settings',
+          'Go to Google Play Store > Menu > Subscriptions to manage your subscription.',
+          [{ text: 'OK' }]
+        );
+      }
+    }
+  };
+
+  const handleRestorePurchases = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const restored = await restorePurchases();
+    
+    if (restored) {
+      Alert.alert('Success', 'Your purchases have been restored.');
+    } else {
+      Alert.alert('No Purchases Found', 'We couldn\'t find any previous purchases to restore.');
+    }
+  };
+
+  const handleCancelSubscription = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    if (status === 'trial') {
+      Alert.alert(
+        'End Trial Early?',
+        'Are you sure you want to end your free trial? You\'ll lose access to all premium features.',
+        [
+          { text: 'Keep Trial', style: 'cancel' },
+          { text: 'End Trial', style: 'destructive', onPress: cancelSubscription },
+        ]
+      );
+    } else {
+      handleManageSubscription();
+    }
+  };
+
+  return (
+    <LinearGradient
+      colors={['#E8DEFF', '#F8F5FF', '#FFE8F0']}
+      start={{ x: 0.5, y: 0 }}
+      end={{ x: 0.5, y: 1 }}
+      style={styles.container}
+    >
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: headerHeight + Spacing.lg, paddingBottom: insets.bottom + Spacing.xl },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.subscriptionCard}>
+          <View style={styles.subscriptionHeader}>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor() }]}>
+              <Text style={styles.statusBadgeText}>
+                {hasActiveSubscription ? 'ACTIVE' : 'INACTIVE'}
+              </Text>
+            </View>
+          </View>
+          
+          <View style={styles.subscriptionInfo}>
+            <Text style={styles.subscriptionLabel}>Current Plan</Text>
+            <Text style={styles.subscriptionStatus}>{getSubscriptionStatusText()}</Text>
+          </View>
+
+          {!hasActiveSubscription ? (
+            <Pressable style={styles.upgradeButton} onPress={handleUpgrade}>
+              <Feather name="star" size={18} color="#FFFFFF" />
+              <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+            </Pressable>
+          ) : null}
+
+          {hasActiveSubscription && status !== 'trial' ? (
+            <Pressable style={styles.manageButton} onPress={handleManageSubscription}>
+              <Feather name="external-link" size={18} color={StoryBuddyColors.primary} />
+              <Text style={styles.manageButtonText}>Manage Subscription</Text>
+            </Pressable>
+          ) : null}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account</Text>
+          
+          <Pressable style={styles.menuItem} onPress={handleRestorePurchases}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.menuIconContainer}>
+                <Feather name="refresh-cw" size={20} color={StoryBuddyColors.primary} />
+              </View>
+              <Text style={styles.menuItemText}>Restore Purchases</Text>
+            </View>
+            <Feather name="chevron-right" size={20} color={StoryBuddyColors.textSecondary} />
+          </Pressable>
+
+          {hasActiveSubscription ? (
+            <Pressable style={styles.menuItem} onPress={handleCancelSubscription}>
+              <View style={styles.menuItemLeft}>
+                <View style={[styles.menuIconContainer, { backgroundColor: 'rgba(255, 107, 107, 0.1)' }]}>
+                  <Feather name="x-circle" size={20} color={StoryBuddyColors.error} />
+                </View>
+                <Text style={[styles.menuItemText, { color: StoryBuddyColors.error }]}>
+                  {status === 'trial' ? 'End Trial' : 'Cancel Subscription'}
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={20} color={StoryBuddyColors.textSecondary} />
+            </Pressable>
+          ) : null}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Legal</Text>
+          
+          <Pressable style={styles.menuItem}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.menuIconContainer}>
+                <Feather name="file-text" size={20} color={StoryBuddyColors.primary} />
+              </View>
+              <Text style={styles.menuItemText}>Terms of Service</Text>
+            </View>
+            <Feather name="chevron-right" size={20} color={StoryBuddyColors.textSecondary} />
+          </Pressable>
+
+          <Pressable style={styles.menuItem}>
+            <View style={styles.menuItemLeft}>
+              <View style={styles.menuIconContainer}>
+                <Feather name="shield" size={20} color={StoryBuddyColors.primary} />
+              </View>
+              <Text style={styles.menuItemText}>Privacy Policy</Text>
+            </View>
+            <Feather name="chevron-right" size={20} color={StoryBuddyColors.textSecondary} />
+          </Pressable>
+        </View>
+
+        <Text style={styles.versionText}>StoryTale v1.0.0</Text>
+      </ScrollView>
+    </LinearGradient>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: Spacing.xl,
+  },
+  subscriptionCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    marginBottom: Spacing.xl,
+  },
+  subscriptionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: Spacing.md,
+  },
+  statusBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.xs,
+  },
+  statusBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  subscriptionInfo: {
+    marginBottom: Spacing.lg,
+  },
+  subscriptionLabel: {
+    ...Typography.small,
+    color: StoryBuddyColors.textSecondary,
+    marginBottom: Spacing.xs,
+  },
+  subscriptionStatus: {
+    ...Typography.h4,
+    color: StoryBuddyColors.textPrimary,
+  },
+  upgradeButton: {
+    backgroundColor: StoryBuddyColors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.sm,
+  },
+  upgradeButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  manageButton: {
+    backgroundColor: 'rgba(255, 107, 157, 0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.sm,
+  },
+  manageButtonText: {
+    color: StoryBuddyColors.primary,
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  section: {
+    marginBottom: Spacing.xl,
+  },
+  sectionTitle: {
+    ...Typography.small,
+    color: StoryBuddyColors.textSecondary,
+    fontWeight: '600',
+    marginBottom: Spacing.md,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  menuItem: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.sm,
+  },
+  menuItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  menuIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 107, 157, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.md,
+  },
+  menuItemText: {
+    ...Typography.body,
+    color: StoryBuddyColors.textPrimary,
+  },
+  versionText: {
+    ...Typography.small,
+    color: StoryBuddyColors.textSecondary,
+    textAlign: 'center',
+    marginTop: Spacing.lg,
+  },
+});
