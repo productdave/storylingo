@@ -1,0 +1,313 @@
+Add a freemium subscription model to the StoryTale app that allows users 3 free stories per month, then requires a subscription for unlimited access. Include a paywall, subscription management, and premium features.
+Current App Structure
+
+React Native app for iOS/Android
+AI-powered storytelling using Anthropic Claude API
+Story selection screen with classic tales (Snow White, Rapunzel, Peter Pan, etc.)
+Audio narration feature
+Multi-language support (EN, 中文, ES)
+
+Feature Requirements
+1. User Story Tracking
+Create a system to track story usage per user:
+
+Track number of stories listened to per month per user
+Store user subscription status (free/premium)
+Reset free story counter on the 1st of each month
+Store data locally using AsyncStorage or similar
+Add user ID/device ID tracking
+
+Implementation Details:
+javascript// Story usage data structure
+{
+  userId: "unique-device-id",
+  storiesThisMonth: 2,
+  monthResetDate: "2026-02-01",
+  subscriptionStatus: "free", // "free" | "premium_monthly" | "premium_annual"
+  subscriptionExpiryDate: null,
+  freeStoriesLimit: 3
+}
+2. Story Counter UI Component
+Add a prominent counter at the top of the story selection screen:
+
+Shows "X/3 free stories this month" for free users
+Hide counter for premium users
+Use pink/purple color scheme matching app design
+Position: Below page title, above language selector
+
+Visual Design:
+
+White rounded card with shadow
+Large pink number (2em font size)
+Gray subtitle text
+Center aligned
+
+3. Story Badge System
+Add visual badges to story cards:
+
+FREE badge: Green, top-right corner for available free stories
+PREMIUM badge: Gold gradient, top-right corner for locked stories
+Lock overlay: Semi-transparent overlay with lock icon for locked stories
+Remove all badges for premium users
+
+4. Paywall Screen
+Create a paywall modal that appears when:
+
+User tries to listen to 4th story in a month (free limit exceeded)
+User taps on a premium-only story
+User manually accesses subscription settings
+
+Paywall Design:
+
+Full-screen modal with gradient background matching app
+Owl icon at top (app mascot)
+Title: "You've Used Your Free Stories!"
+Subtitle: "Unlock unlimited magical tales"
+Two pricing cards (see below)
+CTA button: "Start Free 7-Day Trial"
+"Restore Purchase" link at bottom
+Close button (X) in top-left
+
+Pricing Cards:
+javascriptconst pricingPlans = [
+  {
+    id: "annual",
+    name: "Annual Plan",
+    price: "$49.99",
+    priceDetail: "$4.16/month",
+    savings: "Save 40%",
+    recommended: true,
+    features: [
+      "Unlimited stories",
+      "All story collections",
+      "Offline downloads",
+      "Custom story creation",
+      "Family sharing (5 kids)"
+    ]
+  },
+  {
+    id: "monthly",
+    name: "Monthly Plan",
+    price: "$6.99",
+    priceDetail: "per month",
+    recommended: false,
+    features: [
+      "Unlimited stories",
+      "All story collections",
+      "Offline downloads",
+      "Custom story creation",
+      "Family sharing (5 kids)"
+    ]
+  }
+];
+5. Success/Welcome Screen
+After successful subscription, show a celebration screen:
+
+Gold star/celebration icon
+Title: "Welcome to Premium!"
+Subtitle: "Your magical storytelling adventure begins now"
+2x2 grid showing benefits:
+
+Unlimited Stories (book icon)
+Custom Creation (star icon)
+Offline Mode (download icon)
+Family Sharing (family icon)
+
+
+"Start Exploring" button to dismiss
+
+6. Subscription Integration
+Implement subscription logic using React Native IAP (In-App Purchases):
+For iOS:
+
+Use StoreKit/react-native-iap
+Product IDs: "storytale_monthly", "storytale_annual"
+Implement 7-day free trial
+Handle subscription restoration
+Validate receipts
+
+For Android:
+
+Use Google Play Billing/react-native-iap
+Product IDs: "storytale_monthly", "storytale_annual"
+Implement 7-day free trial
+Handle subscription restoration
+Validate receipts
+
+Code Structure:
+javascriptimport * as RNIap from 'react-native-iap';
+
+const productIds = [
+  'storytale_monthly',
+  'storytale_annual'
+];
+
+// Initialize IAP
+// Get products
+// Purchase product with trial
+// Validate receipt
+// Update user subscription status
+// Handle errors
+7. Subscription Status Check
+Before playing any story, check:
+javascriptasync function canPlayStory(storyId) {
+  const userData = await getUserData();
+  
+  // Premium users can play anything
+  if (userData.subscriptionStatus !== 'free') {
+    return { allowed: true };
+  }
+  
+  // Free users: check monthly limit
+  if (userData.storiesThisMonth >= userData.freeStoriesLimit) {
+    return { 
+      allowed: false, 
+      reason: 'limit_reached',
+      showPaywall: true 
+    };
+  }
+  
+  // Check if story requires premium
+  if (isPremiumStory(storyId)) {
+    return { 
+      allowed: false, 
+      reason: 'premium_only',
+      showPaywall: true 
+    };
+  }
+  
+  return { allowed: true };
+}
+8. Story Counter Increment
+After user starts listening to a story:
+javascriptasync function incrementStoryCount() {
+  const userData = await getUserData();
+  
+  // Only count for free users
+  if (userData.subscriptionStatus === 'free') {
+    userData.storiesThisMonth += 1;
+    await saveUserData(userData);
+  }
+}
+9. Monthly Reset Logic
+Implement automatic counter reset:
+javascriptasync function checkAndResetMonthlyCounter() {
+  const userData = await getUserData();
+  const today = new Date();
+  const resetDate = new Date(userData.monthResetDate);
+  
+  if (today >= resetDate) {
+    // Reset counter
+    userData.storiesThisMonth = 0;
+    
+    // Set next reset date (first of next month)
+    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    userData.monthResetDate = nextMonth.toISOString();
+    
+    await saveUserData(userData);
+  }
+}
+
+// Call this on app launch
+10. Settings/Account Screen
+Add subscription management section:
+
+Show current plan status
+"Manage Subscription" button (links to App Store/Play Store)
+"Restore Purchases" button
+Display subscription expiry date for premium users
+
+11. Premium-Only Stories Configuration
+Create a configuration file to mark which stories are premium:
+javascriptconst storyConfig = {
+  "snow_white": { isPremium: false },
+  "rapunzel": { isPremium: false },
+  "peter_pan": { isPremium: true },
+  "cinderella": { isPremium: true },
+  "little_mermaid": { isPremium: true },
+  // etc...
+};
+Testing Requirements
+
+Test free user flow: 3 stories work, 4th triggers paywall
+Test subscription purchase flow end-to-end
+Test 7-day trial activation and expiry
+Test subscription restoration
+Test monthly counter reset
+Test premium story access
+Test offline mode for premium users
+Test family sharing (if implementing)
+
+Analytics to Track
+
+Paywall views
+Paywall conversion rate
+Trial start rate
+Trial to paid conversion rate
+Monthly vs Annual selection rate
+Average stories per user (free vs premium)
+Churn rate
+
+Design Assets Needed
+
+Lock icon (for locked stories)
+Owl mascot icon (for paywall)
+Celebration/star icon (for success screen)
+Book, download, family icons (for benefits)
+
+Color Scheme (from existing app)
+
+Primary: #FF6B9D (Pink)
+Secondary: #4A2C5C (Dark Purple)
+Background Gradient: #E8D5F2 to #F5E6F0
+Success Green: #4CAF50
+Premium Gold: #FFD700
+
+Dependencies to Add
+json{
+  "react-native-iap": "^12.x.x",
+  "@react-native-async-storage/async-storage": "^1.x.x"
+}
+Implementation Order
+
+Set up user data storage (AsyncStorage)
+Create story counter tracking logic
+Add counter UI component to story selection screen
+Add badges to story cards
+Build paywall screen UI
+Integrate IAP library
+Connect purchase flow
+Build success/welcome screen
+Add subscription status checks before playing stories
+Implement monthly reset logic
+Add subscription management to settings
+Test thoroughly on both iOS and Android
+
+Edge Cases to Handle
+
+User deletes and reinstalls app (restore purchases)
+Subscription expires mid-session
+User goes offline (cache subscription status)
+Payment fails during trial conversion
+User cancels during trial period
+Multiple devices with same Apple ID/Google account (family sharing)
+Time zone changes (for monthly reset)
+
+Important Notes
+
+Always validate receipts server-side for production
+Store subscription status locally for offline access
+Handle App Store/Play Store edge cases gracefully
+Comply with Apple/Google subscription policies
+Include clear cancellation instructions
+Add privacy policy and terms of service links
+Consider adding a "lifetime" tier in future ($99.99)
+
+Success Metrics
+
+Target: 2-6% conversion rate from free to paid
+Break-even: ~78 stories per premium user per month
+Expected ARPU: $4-7/month per paying user
+
+
+Please implement this freemium system following the design patterns shown in the attached UX mockup. Maintain the existing app's cute, child-friendly aesthetic while making the monetization feel natural and non-intrusive.
