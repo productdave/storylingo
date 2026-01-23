@@ -81,7 +81,19 @@ export default function StorySelectionScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   
   const { language, setLanguage, t } = useLanguage();
-  const { status, trialDaysRemaining, hasActiveSubscription, isTrialExpired } = useSubscription();
+  const { 
+    status, 
+    trialDaysRemaining, 
+    hasActiveSubscription, 
+    isTrialExpired,
+    dailyListenTimeSeconds,
+    dailyLimitSeconds,
+  } = useSubscription();
+
+  const isTrial = status === 'free_trial' || status === 'extended_trial';
+  const remainingSeconds = Math.max(0, dailyLimitSeconds - dailyListenTimeSeconds);
+  const remainingMinutes = Math.ceil(remainingSeconds / 60);
+  const isLowTime = remainingSeconds < 180; // Less than 3 minutes
 
   const handleSelectStory = (story: Story) => {
     if (isTrialExpired) {
@@ -129,17 +141,31 @@ export default function StorySelectionScreen() {
     >
       <View style={[styles.headerRow, { paddingTop: headerHeight + Spacing.md }]}>
         {trialStatusText ? (
-          <View style={styles.trialSection}>
-            <View style={styles.trialBadge}>
-              <Feather name="star" size={12} color={StoryBuddyColors.primary} />
-              <Text style={styles.trialBadgeText}>{trialStatusText}</Text>
+          <>
+            <View style={styles.trialSection}>
+              <View style={styles.trialBadge}>
+                <Feather name="star" size={12} color={StoryBuddyColors.primary} />
+                <Text style={styles.trialBadgeText}>{trialStatusText}</Text>
+              </View>
+              {isTrial ? (
+                <Pressable style={styles.upgradeButton} onPress={handleUpgrade}>
+                  <Text style={styles.upgradeButtonText}>Upgrade</Text>
+                </Pressable>
+              ) : null}
             </View>
-            {(status === 'free_trial' || status === 'extended_trial') ? (
-              <Pressable style={styles.upgradeButton} onPress={handleUpgrade}>
-                <Text style={styles.upgradeButtonText}>Upgrade</Text>
-              </Pressable>
+            {isTrial ? (
+              <View style={[styles.dailyLimitBadge, isLowTime ? styles.dailyLimitBadgeWarning : null]}>
+                <Feather 
+                  name="clock" 
+                  size={12} 
+                  color={isLowTime ? StoryBuddyColors.error : StoryBuddyColors.textSecondary} 
+                />
+                <Text style={[styles.dailyLimitText, isLowTime ? styles.dailyLimitTextWarning : null]}>
+                  {remainingMinutes} min left today
+                </Text>
+              </View>
             ) : null}
-          </View>
+          </>
         ) : (
           <View style={styles.trialBadgePlaceholder} />
         )}
@@ -244,6 +270,29 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     color: "#FFFFFF",
+  },
+  dailyLimitBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    paddingVertical: 6,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.full,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: StoryBuddyColors.border,
+  },
+  dailyLimitBadgeWarning: {
+    backgroundColor: "rgba(255, 107, 107, 0.15)",
+    borderColor: StoryBuddyColors.error,
+  },
+  dailyLimitText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: StoryBuddyColors.textSecondary,
+  },
+  dailyLimitTextWarning: {
+    color: StoryBuddyColors.error,
   },
   settingsButton: {
     padding: Spacing.xs,
