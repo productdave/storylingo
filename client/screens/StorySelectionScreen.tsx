@@ -139,31 +139,19 @@ export default function StorySelectionScreen() {
       end={{ x: 0.5, y: 1 }}
       style={styles.container}
     >
-      {/* Trial info bar */}
-      {isTrial ? (
-        <View style={[styles.trialInfoBar, { paddingTop: headerHeight + Spacing.sm }]}>
-          <View style={styles.trialBadge}>
-            <Feather name="star" size={12} color={StoryBuddyColors.primary} />
-            <Text style={styles.trialBadgeText}>{trialStatusText}</Text>
-          </View>
-          <View style={[styles.dailyLimitBadge, isLowTime ? styles.dailyLimitBadgeWarning : null]}>
+      <View style={[styles.headerRow, { paddingTop: headerHeight + Spacing.md }]}>
+        {isTrial ? (
+          <Pressable style={[styles.trialBadge, isLowTime ? styles.trialBadgeWarning : null]} onPress={handleUpgrade}>
             <Feather 
               name="clock" 
               size={12} 
-              color={isLowTime ? StoryBuddyColors.error : StoryBuddyColors.textSecondary} 
+              color={isLowTime ? StoryBuddyColors.error : StoryBuddyColors.primary} 
             />
-            <Text style={[styles.dailyLimitText, isLowTime ? styles.dailyLimitTextWarning : null]}>
-              {remainingMinutes} min left today
+            <Text style={[styles.trialBadgeText, isLowTime ? styles.trialBadgeTextWarning : null]}>
+              {remainingMinutes} min left
             </Text>
-          </View>
-          <Pressable style={styles.upgradeButton} onPress={handleUpgrade}>
-            <Text style={styles.upgradeButtonText}>Upgrade</Text>
           </Pressable>
-        </View>
-      ) : null}
-      
-      <View style={[styles.headerRow, { paddingTop: isTrial ? Spacing.sm : headerHeight + Spacing.md }]}>
-        {hasActiveSubscription && !isTrial ? (
+        ) : hasActiveSubscription ? (
           <View style={styles.premiumBadge}>
             <Feather name="award" size={12} color={StoryBuddyColors.success} />
             <Text style={styles.premiumBadgeText}>Premium</Text>
@@ -233,15 +221,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  trialInfoBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.sm,
-    gap: Spacing.sm,
-    flexWrap: "wrap",
-  },
   premiumBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -277,47 +256,16 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: StoryBuddyColors.primary,
   },
+  trialBadgeWarning: {
+    backgroundColor: "rgba(255, 107, 107, 0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 107, 107, 0.3)",
+  },
+  trialBadgeTextWarning: {
+    color: StoryBuddyColors.error,
+  },
   trialBadgePlaceholder: {
     width: 80,
-  },
-  trialSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-  },
-  upgradeButton: {
-    backgroundColor: StoryBuddyColors.primary,
-    paddingVertical: 4,
-    paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.full,
-  },
-  upgradeButtonText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  dailyLimitBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    paddingVertical: 6,
-    paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.full,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: StoryBuddyColors.border,
-  },
-  dailyLimitBadgeWarning: {
-    backgroundColor: "rgba(255, 107, 107, 0.15)",
-    borderColor: StoryBuddyColors.error,
-  },
-  dailyLimitText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: StoryBuddyColors.textSecondary,
-  },
-  dailyLimitTextWarning: {
-    color: StoryBuddyColors.error,
   },
   settingsButton: {
     padding: Spacing.xs,
