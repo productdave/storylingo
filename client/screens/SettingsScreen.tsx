@@ -24,7 +24,17 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { status, trialDaysRemaining, hasActiveSubscription, restorePurchases } = useSubscription();
+  const { 
+    status, 
+    trialDaysRemaining, 
+    hasActiveSubscription, 
+    restorePurchases,
+    dailyListenTimeSeconds,
+    dailyLimitSeconds,
+  } = useSubscription();
+  
+  const isTrial = status === 'free_trial' || status === 'extended_trial';
+  const remainingMinutes = Math.ceil(Math.max(0, dailyLimitSeconds - dailyListenTimeSeconds) / 60);
 
   const getSubscriptionStatusText = () => {
     switch (status) {
@@ -118,6 +128,15 @@ export default function SettingsScreen() {
             <Text style={styles.subscriptionStatus}>{getSubscriptionStatusText()}</Text>
           </View>
 
+          {isTrial ? (
+            <View style={styles.dailyLimitInfo}>
+              <Feather name="clock" size={16} color={StoryBuddyColors.textSecondary} />
+              <Text style={styles.dailyLimitText}>
+                {remainingMinutes} min remaining today (15 min daily limit)
+              </Text>
+            </View>
+          ) : null}
+
           {!hasActiveSubscription ? (
             <Pressable style={styles.upgradeButton} onPress={handleUpgrade}>
               <Feather name="star" size={18} color="#FFFFFF" />
@@ -207,7 +226,21 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   subscriptionInfo: {
+    marginBottom: Spacing.md,
+  },
+  dailyLimitInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: 'rgba(255, 107, 157, 0.1)',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
     marginBottom: Spacing.lg,
+  },
+  dailyLimitText: {
+    fontSize: 13,
+    color: StoryBuddyColors.textSecondary,
+    flex: 1,
   },
   subscriptionLabel: {
     ...Typography.small,
