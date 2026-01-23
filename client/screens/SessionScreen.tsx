@@ -63,7 +63,7 @@ function TrialPromptModal({ visible, onStartTrial, onDismiss }: {
           
           <Text style={modalStyles.title}>Enjoying the Story?</Text>
           <Text style={modalStyles.subtitle}>
-            Start your free 7-day trial to continue enjoying unlimited magical stories!
+            Get 30 days free when you subscribe!
           </Text>
           
           <View style={modalStyles.features}>
@@ -82,7 +82,7 @@ function TrialPromptModal({ visible, onStartTrial, onDismiss }: {
           </View>
           
           <Pressable style={modalStyles.button} onPress={onStartTrial}>
-            <Text style={modalStyles.buttonText}>Start 7-Day Free Trial</Text>
+            <Text style={modalStyles.buttonText}>Start 30-Day Free Trial</Text>
           </Pressable>
           
           <Pressable style={modalStyles.dismissButton} onPress={onDismiss}>

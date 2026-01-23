@@ -41,7 +41,7 @@ const PLANS = [
 const FEATURES = [
   { icon: 'book-open', text: 'Unlimited stories' },
   { icon: 'layers', text: 'All story collections' },
-  { icon: 'gift', text: '7 bonus days free' },
+  { icon: 'gift', text: '30 bonus days free' },
   { icon: 'x-circle', text: 'Cancel anytime' },
 ];
 
@@ -112,13 +112,13 @@ export default function PaywallScreen() {
       return {
         icon: 'zap' as const,
         title: "You've Reached Today's Limit",
-        subtitle: "Upgrade now to get unlimited story time plus 7 extra days free!",
+        subtitle: "Get 30 days free when you subscribe!",
       };
     }
     return {
       icon: 'star' as const,
       title: "Unlock Unlimited Stories",
-      subtitle: "Subscribe now and get 7 extra days free to explore all magical adventures!",
+      subtitle: "Get 30 days free when you subscribe!",
     };
   };
 
@@ -221,7 +221,7 @@ export default function PaywallScreen() {
                 {isLoading ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.ctaText}>Start 7-Day Free Trial</Text>
+                  <Text style={styles.ctaText}>Start 30-Day Free Trial</Text>
                 )}
               </Pressable>
               <Text style={styles.ctaSubtext}>
