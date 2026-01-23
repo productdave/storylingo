@@ -115,10 +115,16 @@ export default function SessionScreen() {
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [displayRemainingSeconds, setDisplayRemainingSeconds] = useState(
+    Math.max(0, dailyLimitSeconds - dailyListenTimeSeconds)
+  );
 
   const listenTimeRef = useRef(0);
   const listenIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const dailyLimitCheckedRef = useRef(false);
+  
+  const isTrial = subscriptionStatus === 'free_trial' || subscriptionStatus === 'extended_trial';
+  const isLowTime = displayRemainingSeconds < 180; // Less than 3 minutes
 
   const pcRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -149,12 +155,18 @@ export default function SessionScreen() {
 
   // Track listen time when connecting or session is active
   useEffect(() => {
-    const isTrial = subscriptionStatus === 'free_trial' || subscriptionStatus === 'extended_trial';
     const isTracking = (status === 'connecting' || isSessionActive) && !isPaused;
     
     if (isTracking) {
       listenIntervalRef.current = setInterval(() => {
         listenTimeRef.current += 1;
+        
+        // Update display countdown for trial users
+        if (isTrial) {
+          const totalToday = dailyListenTimeSeconds + listenTimeRef.current;
+          const remaining = Math.max(0, dailyLimitSeconds - totalToday);
+          setDisplayRemainingSeconds(remaining);
+        }
         
         // Save listen time every 10 seconds
         if (listenTimeRef.current % 10 === 0) {
@@ -187,7 +199,7 @@ export default function SessionScreen() {
         clearInterval(listenIntervalRef.current);
       }
     };
-  }, [status, isSessionActive, isPaused, subscriptionStatus, dailyListenTimeSeconds, dailyLimitSeconds]);
+  }, [status, isSessionActive, isPaused, isTrial, dailyListenTimeSeconds, dailyLimitSeconds]);
 
   const startPulseAnimation = useCallback(() => {
     pulseScale.value = withRepeat(
@@ -505,6 +517,12 @@ export default function SessionScreen() {
     navigation.replace("StorySelection");
   };
 
+  const formatTimeRemaining = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const getStatusText = () => {
     // Show paused status when paused
     if (isPaused && isSessionActive) {
@@ -577,6 +595,19 @@ export default function SessionScreen() {
         ]}
       >
         <ThemedText style={styles.statusText}>{getStatusText()}</ThemedText>
+
+        {isTrial ? (
+          <View style={[styles.countdownBadge, isLowTime ? styles.countdownBadgeWarning : null]}>
+            <Feather 
+              name="clock" 
+              size={14} 
+              color={isLowTime ? StoryBuddyColors.error : StoryBuddyColors.textSecondary} 
+            />
+            <Text style={[styles.countdownText, isLowTime ? styles.countdownTextWarning : null]}>
+              {formatTimeRemaining(displayRemainingSeconds)} left today
+            </Text>
+          </View>
+        ) : null}
 
         <View style={styles.talkButtonContainer}>
           <Animated.View style={[styles.pulseRing, pulseStyle]} />
@@ -727,6 +758,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: StoryBuddyColors.textSecondary,
     textAlign: "center",
+  },
+  countdownBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    paddingVertical: 8,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.full,
+    gap: 8,
+    marginTop: Spacing.md,
+    borderWidth: 1,
+    borderColor: StoryBuddyColors.border,
+  },
+  countdownBadgeWarning: {
+    backgroundColor: "rgba(255, 107, 107, 0.15)",
+    borderColor: StoryBuddyColors.error,
+  },
+  countdownText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: StoryBuddyColors.textSecondary,
+  },
+  countdownTextWarning: {
+    color: StoryBuddyColors.error,
   },
   talkButtonContainer: {
     alignItems: "center",
