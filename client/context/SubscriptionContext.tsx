@@ -236,8 +236,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const isTrialExpired = data.status === 'none' && 
     (data.freeTrialEndDate !== null || data.extendedTrialEndDate !== null);
   
+  // Daily limit only applies to free_trial (before signing up for any plan)
   const dailyLimitReached = 
-    (data.status === 'free_trial' || data.status === 'extended_trial') && 
+    data.status === 'free_trial' && 
     data.dailyListenTimeSeconds >= DAILY_LIMIT_SECONDS;
 
   return (

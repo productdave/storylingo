@@ -33,7 +33,8 @@ export default function SettingsScreen() {
     dailyLimitSeconds,
   } = useSubscription();
   
-  const isTrial = status === 'free_trial' || status === 'extended_trial';
+  // Daily limit only applies to free trial (before signing up for any plan)
+  const isFreeTrial = status === 'free_trial';
   const remainingMinutes = Math.ceil(Math.max(0, dailyLimitSeconds - dailyListenTimeSeconds) / 60);
 
   const getSubscriptionStatusText = () => {
@@ -128,7 +129,7 @@ export default function SettingsScreen() {
             <Text style={styles.subscriptionStatus}>{getSubscriptionStatusText()}</Text>
           </View>
 
-          {isTrial ? (
+          {isFreeTrial ? (
             <View style={styles.dailyLimitInfo}>
               <Feather name="clock" size={16} color={StoryBuddyColors.textSecondary} />
               <Text style={styles.dailyLimitText}>
