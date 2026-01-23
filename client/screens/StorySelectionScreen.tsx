@@ -139,33 +139,35 @@ export default function StorySelectionScreen() {
       end={{ x: 0.5, y: 1 }}
       style={styles.container}
     >
-      <View style={[styles.headerRow, { paddingTop: headerHeight + Spacing.md }]}>
-        {trialStatusText ? (
-          <>
-            <View style={styles.trialSection}>
-              <View style={styles.trialBadge}>
-                <Feather name="star" size={12} color={StoryBuddyColors.primary} />
-                <Text style={styles.trialBadgeText}>{trialStatusText}</Text>
-              </View>
-              {isTrial ? (
-                <Pressable style={styles.upgradeButton} onPress={handleUpgrade}>
-                  <Text style={styles.upgradeButtonText}>Upgrade</Text>
-                </Pressable>
-              ) : null}
-            </View>
-            {isTrial ? (
-              <View style={[styles.dailyLimitBadge, isLowTime ? styles.dailyLimitBadgeWarning : null]}>
-                <Feather 
-                  name="clock" 
-                  size={12} 
-                  color={isLowTime ? StoryBuddyColors.error : StoryBuddyColors.textSecondary} 
-                />
-                <Text style={[styles.dailyLimitText, isLowTime ? styles.dailyLimitTextWarning : null]}>
-                  {remainingMinutes} min left today
-                </Text>
-              </View>
-            ) : null}
-          </>
+      {/* Trial info bar */}
+      {isTrial ? (
+        <View style={[styles.trialInfoBar, { paddingTop: headerHeight + Spacing.sm }]}>
+          <View style={styles.trialBadge}>
+            <Feather name="star" size={12} color={StoryBuddyColors.primary} />
+            <Text style={styles.trialBadgeText}>{trialStatusText}</Text>
+          </View>
+          <View style={[styles.dailyLimitBadge, isLowTime ? styles.dailyLimitBadgeWarning : null]}>
+            <Feather 
+              name="clock" 
+              size={12} 
+              color={isLowTime ? StoryBuddyColors.error : StoryBuddyColors.textSecondary} 
+            />
+            <Text style={[styles.dailyLimitText, isLowTime ? styles.dailyLimitTextWarning : null]}>
+              {remainingMinutes} min left today
+            </Text>
+          </View>
+          <Pressable style={styles.upgradeButton} onPress={handleUpgrade}>
+            <Text style={styles.upgradeButtonText}>Upgrade</Text>
+          </Pressable>
+        </View>
+      ) : null}
+      
+      <View style={[styles.headerRow, { paddingTop: isTrial ? Spacing.sm : headerHeight + Spacing.md }]}>
+        {hasActiveSubscription && !isTrial ? (
+          <View style={styles.premiumBadge}>
+            <Feather name="award" size={12} color={StoryBuddyColors.success} />
+            <Text style={styles.premiumBadgeText}>Premium</Text>
+          </View>
         ) : (
           <View style={styles.trialBadgePlaceholder} />
         )}
@@ -230,6 +232,29 @@ export default function StorySelectionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  trialInfoBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.sm,
+    gap: Spacing.sm,
+    flexWrap: "wrap",
+  },
+  premiumBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(76, 175, 80, 0.15)",
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    gap: Spacing.xs,
+  },
+  premiumBadgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: StoryBuddyColors.success,
   },
   headerRow: {
     flexDirection: "row",
