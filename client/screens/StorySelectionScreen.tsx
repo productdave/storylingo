@@ -141,14 +141,19 @@ export default function StorySelectionScreen() {
     >
       <View style={[styles.headerRow, { paddingTop: headerHeight + Spacing.md }]}>
         {isTrial ? (
-          <Pressable style={[styles.trialBadge, isLowTime ? styles.trialBadgeWarning : null]} onPress={handleUpgrade}>
-            <Feather 
-              name="clock" 
-              size={12} 
-              color={isLowTime ? StoryBuddyColors.error : StoryBuddyColors.primary} 
-            />
-            <Text style={[styles.trialBadgeText, isLowTime ? styles.trialBadgeTextWarning : null]}>
-              {remainingMinutes} min left
+          <Pressable style={[styles.trialBadgeContainer, isLowTime ? styles.trialBadgeWarning : null]} onPress={handleUpgrade}>
+            <View style={styles.trialBadgeRow}>
+              <Feather 
+                name="clock" 
+                size={12} 
+                color={isLowTime ? StoryBuddyColors.error : StoryBuddyColors.primary} 
+              />
+              <Text style={[styles.trialBadgeText, isLowTime ? styles.trialBadgeTextWarning : null]}>
+                {remainingMinutes} min left
+              </Text>
+            </View>
+            <Text style={styles.trialDaysText}>
+              {status === 'extended_trial' ? `${trialDaysRemaining}-day bonus` : `${trialDaysRemaining}-day trial`}
             </Text>
           </Pressable>
         ) : hasActiveSubscription ? (
@@ -242,19 +247,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.md,
   },
-  trialBadge: {
-    flexDirection: "row",
+  trialBadgeContainer: {
     alignItems: "center",
     backgroundColor: "rgba(255, 107, 157, 0.15)",
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
-    borderRadius: BorderRadius.full,
+    borderRadius: BorderRadius.md,
+  },
+  trialBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.xs,
   },
   trialBadgeText: {
     fontSize: 12,
     fontWeight: "600",
     color: StoryBuddyColors.primary,
+  },
+  trialDaysText: {
+    fontSize: 10,
+    color: StoryBuddyColors.textSecondary,
+    marginTop: 2,
   },
   trialBadgeWarning: {
     backgroundColor: "rgba(255, 107, 107, 0.15)",

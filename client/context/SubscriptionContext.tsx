@@ -177,7 +177,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const startExtendedTrial = async () => {
     const now = new Date();
-    const trialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
     
     await saveData({
       ...data,

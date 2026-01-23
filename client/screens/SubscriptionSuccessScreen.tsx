@@ -42,7 +42,7 @@ export default function SubscriptionSuccessScreen() {
   const getSubtitle = () => {
     switch (plan) {
       case 'trial':
-        return 'Enjoy 7 days of unlimited magical stories';
+        return 'Enjoy 30 days of unlimited magical stories';
       default:
         return 'Your magical storytelling adventure begins now';
     }
