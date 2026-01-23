@@ -49,7 +49,7 @@ export default function PaywallScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<PaywallRouteProp>();
-  const { startExtendedTrial, subscribe, isTrialExpired, dailyLimitReached, status } = useSubscription();
+  const { subscribe, isTrialExpired, dailyLimitReached } = useSubscription();
   
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('annual');
   const [isLoading, setIsLoading] = useState(false);
@@ -60,20 +60,6 @@ export default function PaywallScreen() {
   const handleSelectPlan = (planId: 'monthly' | 'annual') => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedPlan(planId);
-  };
-
-  const handleStartExtendedTrial = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setIsLoading(true);
-    
-    try {
-      await startExtendedTrial();
-      navigation.replace('SubscriptionSuccess', { plan: 'trial' });
-    } catch (error) {
-      console.error('Failed to start extended trial:', error);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleSubscribe = async () => {
@@ -123,7 +109,6 @@ export default function PaywallScreen() {
   };
 
   const headerContent = getHeaderContent();
-  const showExtendedTrialButton = status === 'free_trial' && !isTrialExpired;
 
   return (
     <LinearGradient
@@ -151,11 +136,6 @@ export default function PaywallScreen() {
           </View>
           <Text style={styles.title}>{headerContent.title}</Text>
           <Text style={styles.subtitle}>{headerContent.subtitle}</Text>
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(150).springify()} style={styles.bonusBanner}>
-          <Feather name="gift" size={20} color="#FFFFFF" />
-          <Text style={styles.bonusBannerText}>Get 7 Extra Days Free When You Subscribe!</Text>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.featuresContainer}>
@@ -211,41 +191,20 @@ export default function PaywallScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.ctaContainer}>
-          {showExtendedTrialButton ? (
-            <>
-              <Pressable
-                style={[styles.ctaButton, isLoading && styles.ctaButtonDisabled]}
-                onPress={handleStartExtendedTrial}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.ctaText}>Start 30-Day Free Trial</Text>
-                )}
-              </Pressable>
-              <Text style={styles.ctaSubtext}>
-                Then {selectedPlan === 'annual' ? '$99/year' : '$9.99/month'}. Cancel anytime.
-              </Text>
-            </>
-          ) : (
-            <>
-              <Pressable
-                style={[styles.ctaButton, isLoading && styles.ctaButtonDisabled]}
-                onPress={handleSubscribe}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.ctaText}>Subscribe Now</Text>
-                )}
-              </Pressable>
-              <Text style={styles.ctaSubtext}>
-                {selectedPlan === 'annual' ? '$99/year' : '$9.99/month'}. Cancel anytime.
-              </Text>
-            </>
-          )}
+          <Pressable
+            style={[styles.ctaButton, isLoading && styles.ctaButtonDisabled]}
+            onPress={handleSubscribe}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.ctaText}>Start 30-Day Free Trial</Text>
+            )}
+          </Pressable>
+          <Text style={styles.ctaSubtext}>
+            Then {selectedPlan === 'annual' ? '$99/year' : '$9.99/month'}. Cancel anytime.
+          </Text>
 
           <Pressable onPress={handleRestore} style={styles.restoreButton}>
             <Text style={styles.restoreText}>Restore Purchases</Text>
