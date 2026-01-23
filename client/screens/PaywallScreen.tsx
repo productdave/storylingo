@@ -55,7 +55,7 @@ export default function PaywallScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const fromDailyLimit = route.params?.fromDailyLimit ?? false;
-  const canDismiss = !isTrialExpired && !fromDailyLimit;
+  const canDismiss = true; // Always allow users to go back
 
   const handleSelectPlan = (planId: 'monthly' | 'annual') => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
