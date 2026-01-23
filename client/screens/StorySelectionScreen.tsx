@@ -157,7 +157,7 @@ export default function StorySelectionScreen() {
           </Pressable>
         ) : isExtendedTrial ? (
           <View style={styles.extendedTrialBadge}>
-            <Feather name="gift" size={12} color={StoryBuddyColors.secondary} />
+            <Feather name="gift" size={12} color="#6A5ACD" />
             <Text style={styles.extendedTrialText}>{trialDaysRemaining} days left</Text>
           </View>
         ) : hasActiveSubscription ? (
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   extendedTrialBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 217, 61, 0.2)",
+    backgroundColor: "rgba(106, 90, 205, 0.15)",
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
     borderRadius: BorderRadius.full,
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   extendedTrialText: {
     fontSize: 12,
     fontWeight: "600",
-    color: StoryBuddyColors.secondary,
+    color: "#6A5ACD",
   },
   trialBadgeWarning: {
     backgroundColor: "rgba(255, 107, 107, 0.15)",
