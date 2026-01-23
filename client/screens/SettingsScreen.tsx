@@ -31,6 +31,8 @@ export default function SettingsScreen() {
     restorePurchases,
     dailyListenTimeSeconds,
     dailyLimitSeconds,
+    resetForTesting,
+    simulateExpiredTrial,
   } = useSubscription();
   
   // Daily limit only applies to free trial (before signing up for any plan)
@@ -186,6 +188,44 @@ export default function SettingsScreen() {
                 <Feather name="shield" size={20} color={StoryBuddyColors.primary} />
               </View>
               <Text style={styles.menuItemText}>Privacy Policy</Text>
+            </View>
+            <Feather name="chevron-right" size={20} color={StoryBuddyColors.textSecondary} />
+          </Pressable>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Testing (Development Only)</Text>
+          
+          <Pressable 
+            style={styles.menuItem} 
+            onPress={async () => {
+              await simulateExpiredTrial();
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              Alert.alert('Testing', 'Trial has been expired. Go back and tap a story to see the paywall.');
+            }}
+          >
+            <View style={styles.menuItemLeft}>
+              <View style={[styles.menuIconContainer, { backgroundColor: 'rgba(255, 107, 107, 0.1)' }]}>
+                <Feather name="x-circle" size={20} color={StoryBuddyColors.error} />
+              </View>
+              <Text style={styles.menuItemText}>Simulate Expired Trial</Text>
+            </View>
+            <Feather name="chevron-right" size={20} color={StoryBuddyColors.textSecondary} />
+          </Pressable>
+
+          <Pressable 
+            style={styles.menuItem}
+            onPress={async () => {
+              await resetForTesting();
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              Alert.alert('Testing', 'Subscription reset to new 3-day free trial.');
+            }}
+          >
+            <View style={styles.menuItemLeft}>
+              <View style={[styles.menuIconContainer, { backgroundColor: 'rgba(78, 205, 196, 0.1)' }]}>
+                <Feather name="rotate-ccw" size={20} color={StoryBuddyColors.success} />
+              </View>
+              <Text style={styles.menuItemText}>Reset to New User (3-day trial)</Text>
             </View>
             <Feather name="chevron-right" size={20} color={StoryBuddyColors.textSecondary} />
           </Pressable>

@@ -32,6 +32,7 @@ interface SubscriptionContextType {
   restorePurchases: () => Promise<boolean>;
   addListenTime: (seconds: number) => Promise<void>;
   resetForTesting: () => Promise<void>;
+  simulateExpiredTrial: () => Promise<void>;
 }
 
 const defaultData: SubscriptionData = {
@@ -227,6 +228,21 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(initialData));
   };
 
+  const simulateExpiredTrial = async () => {
+    // Set free trial to have ended yesterday
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const twoDaysAgo = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000);
+    
+    const expiredData: SubscriptionData = {
+      ...defaultData,
+      status: 'none',
+      freeTrialStartDate: twoDaysAgo.toISOString(),
+      freeTrialEndDate: yesterday.toISOString(),
+    };
+    
+    await saveData(expiredData);
+  };
+
   const hasActiveSubscription = 
     data.status === 'free_trial' || 
     data.status === 'extended_trial' || 
@@ -257,6 +273,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         restorePurchases,
         addListenTime,
         resetForTesting,
+        simulateExpiredTrial,
       }}
     >
       {children}
