@@ -13,7 +13,7 @@ export type RootStackParamList = {
   Home: undefined;
   StorySelection: undefined;
   Session: { story: Story };
-  Paywall: { fromTrialPrompt?: boolean };
+  Paywall: { fromTrialPrompt?: boolean; fromDailyLimit?: boolean };
   SubscriptionSuccess: { plan: 'trial' | 'monthly' | 'annual' };
   Settings: undefined;
 };

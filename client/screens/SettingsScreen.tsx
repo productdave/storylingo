@@ -28,8 +28,10 @@ export default function SettingsScreen() {
 
   const getSubscriptionStatusText = () => {
     switch (status) {
-      case 'trial':
+      case 'free_trial':
         return `Free Trial (${trialDaysRemaining} days left)`;
+      case 'extended_trial':
+        return `Extended Trial (${trialDaysRemaining} days left)`;
       case 'monthly':
         return 'Monthly Subscription';
       case 'annual':

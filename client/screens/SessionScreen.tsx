@@ -104,20 +104,21 @@ export default function SessionScreen() {
   const { language, t } = useLanguage();
   const { 
     hasActiveSubscription, 
-    shouldShowTrialPrompt, 
-    addListenTime, 
-    startTrial, 
-    markTrialPromptSeen 
+    addListenTime,
+    dailyLimitReached,
+    dailyLimitSeconds,
+    dailyListenTimeSeconds,
+    status: subscriptionStatus,
   } = useSubscription();
 
   const [status, setStatus] = useState<SessionStatus>("idle");
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [showTrialPrompt, setShowTrialPrompt] = useState(false);
 
   const listenTimeRef = useRef(0);
   const listenIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const dailyLimitCheckedRef = useRef(false);
 
   const pcRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -146,23 +147,31 @@ export default function SessionScreen() {
     };
   }, []);
 
-  // Track listen time when connecting or session is active (for subscription testing)
+  // Track listen time when connecting or session is active
   useEffect(() => {
-    const isTracking = (status === 'connecting' || isSessionActive) && !isPaused && !hasActiveSubscription;
+    const isTrial = subscriptionStatus === 'free_trial' || subscriptionStatus === 'extended_trial';
+    const isTracking = (status === 'connecting' || isSessionActive) && !isPaused;
+    
     if (isTracking) {
       listenIntervalRef.current = setInterval(() => {
         listenTimeRef.current += 1;
         
-        // Check every 10 seconds if we should show the trial prompt
+        // Save listen time every 10 seconds
         if (listenTimeRef.current % 10 === 0) {
           addListenTime(10);
         }
         
-        // Show trial prompt after 10 seconds of this session (change to 300 for 5 minutes)
-        if (listenTimeRef.current >= 10 && shouldShowTrialPrompt()) {
-          setShowTrialPrompt(true);
-          if (listenIntervalRef.current) {
-            clearInterval(listenIntervalRef.current);
+        // Check if daily limit reached (only for trial users)
+        if (isTrial && !dailyLimitCheckedRef.current) {
+          const totalToday = dailyListenTimeSeconds + listenTimeRef.current;
+          if (totalToday >= dailyLimitSeconds) {
+            dailyLimitCheckedRef.current = true;
+            // Stop the session and show paywall
+            if (listenIntervalRef.current) {
+              clearInterval(listenIntervalRef.current);
+            }
+            stopSession();
+            navigation.navigate('Paywall', { fromDailyLimit: true });
           }
         }
       }, 1000);
@@ -178,7 +187,7 @@ export default function SessionScreen() {
         clearInterval(listenIntervalRef.current);
       }
     };
-  }, [status, isSessionActive, isPaused, hasActiveSubscription]);
+  }, [status, isSessionActive, isPaused, subscriptionStatus, dailyListenTimeSeconds, dailyLimitSeconds]);
 
   const startPulseAnimation = useCallback(() => {
     pulseScale.value = withRepeat(
@@ -496,19 +505,6 @@ export default function SessionScreen() {
     navigation.replace("StorySelection");
   };
 
-  const handleStartTrial = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setShowTrialPrompt(false);
-    await startTrial();
-    navigation.navigate("SubscriptionSuccess", { plan: 'trial' });
-  };
-
-  const handleDismissTrialPrompt = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setShowTrialPrompt(false);
-    await markTrialPromptSeen();
-  };
-
   const getStatusText = () => {
     // Show paused status when paused
     if (isPaused && isSessionActive) {
@@ -639,12 +635,6 @@ export default function SessionScreen() {
           </Pressable>
         </View>
       </View>
-
-      <TrialPromptModal
-        visible={showTrialPrompt}
-        onStartTrial={handleStartTrial}
-        onDismiss={handleDismissTrialPrompt}
-      />
     </LinearGradient>
   );
 }

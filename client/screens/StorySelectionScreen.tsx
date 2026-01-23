@@ -109,7 +109,7 @@ export default function StorySelectionScreen() {
   };
 
   const getTrialStatusText = () => {
-    if (status === 'trial') {
+    if (status === 'free_trial' || status === 'extended_trial') {
       return `Trial: ${trialDaysRemaining} day${trialDaysRemaining !== 1 ? 's' : ''} left`;
     }
     if (status === 'monthly' || status === 'annual') {
@@ -134,7 +134,7 @@ export default function StorySelectionScreen() {
               <Feather name="star" size={12} color={StoryBuddyColors.primary} />
               <Text style={styles.trialBadgeText}>{trialStatusText}</Text>
             </View>
-            {status === 'trial' ? (
+            {(status === 'free_trial' || status === 'extended_trial') ? (
               <Pressable style={styles.upgradeButton} onPress={handleUpgrade}>
                 <Text style={styles.upgradeButtonText}>Upgrade</Text>
               </Pressable>
