@@ -90,7 +90,8 @@ export default function StorySelectionScreen() {
     dailyLimitSeconds,
   } = useSubscription();
 
-  const isTrial = status === 'free_trial' || status === 'extended_trial';
+  const isFreeTrial = status === 'free_trial';
+  const isExtendedTrial = status === 'extended_trial';
   const remainingSeconds = Math.max(0, dailyLimitSeconds - dailyListenTimeSeconds);
   const remainingMinutes = Math.ceil(remainingSeconds / 60);
   const isLowTime = remainingSeconds < 180; // Less than 3 minutes
@@ -140,7 +141,7 @@ export default function StorySelectionScreen() {
       style={styles.container}
     >
       <View style={[styles.headerRow, { paddingTop: headerHeight + Spacing.md }]}>
-        {isTrial ? (
+        {isFreeTrial ? (
           <Pressable style={[styles.trialBadgeContainer, isLowTime ? styles.trialBadgeWarning : null]} onPress={handleUpgrade}>
             <View style={styles.trialBadgeRow}>
               <Feather 
@@ -152,10 +153,13 @@ export default function StorySelectionScreen() {
                 {remainingMinutes} min left
               </Text>
             </View>
-            <Text style={styles.trialDaysText}>
-              {status === 'extended_trial' ? `${trialDaysRemaining}-day bonus` : `${trialDaysRemaining}-day trial`}
-            </Text>
+            <Text style={styles.trialDaysText}>{trialDaysRemaining}-day trial</Text>
           </Pressable>
+        ) : isExtendedTrial ? (
+          <View style={styles.extendedTrialBadge}>
+            <Feather name="gift" size={12} color={StoryBuddyColors.secondary} />
+            <Text style={styles.extendedTrialText}>{trialDaysRemaining} days left</Text>
+          </View>
         ) : hasActiveSubscription ? (
           <View style={styles.premiumBadge}>
             <Feather name="award" size={12} color={StoryBuddyColors.success} />
@@ -268,6 +272,20 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: StoryBuddyColors.textSecondary,
     marginTop: 2,
+  },
+  extendedTrialBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 217, 61, 0.2)",
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    gap: Spacing.xs,
+  },
+  extendedTrialText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: StoryBuddyColors.secondary,
   },
   trialBadgeWarning: {
     backgroundColor: "rgba(255, 107, 107, 0.15)",

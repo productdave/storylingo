@@ -123,7 +123,8 @@ export default function SessionScreen() {
   const listenIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const dailyLimitCheckedRef = useRef(false);
   
-  const isTrial = subscriptionStatus === 'free_trial' || subscriptionStatus === 'extended_trial';
+  // Daily limit only applies to free trial (before signing up for any plan)
+  const isFreeTrial = subscriptionStatus === 'free_trial';
   const isLowTime = displayRemainingSeconds < 180; // Less than 3 minutes
 
   const pcRef = useRef<any>(null);
@@ -162,7 +163,7 @@ export default function SessionScreen() {
         listenTimeRef.current += 1;
         
         // Update display countdown for trial users
-        if (isTrial) {
+        if (isFreeTrial) {
           const totalToday = dailyListenTimeSeconds + listenTimeRef.current;
           const remaining = Math.max(0, dailyLimitSeconds - totalToday);
           setDisplayRemainingSeconds(remaining);
@@ -174,7 +175,7 @@ export default function SessionScreen() {
         }
         
         // Check if daily limit reached (only for trial users)
-        if (isTrial && !dailyLimitCheckedRef.current) {
+        if (isFreeTrial && !dailyLimitCheckedRef.current) {
           const totalToday = dailyListenTimeSeconds + listenTimeRef.current;
           if (totalToday >= dailyLimitSeconds) {
             dailyLimitCheckedRef.current = true;
@@ -199,7 +200,7 @@ export default function SessionScreen() {
         clearInterval(listenIntervalRef.current);
       }
     };
-  }, [status, isSessionActive, isPaused, isTrial, dailyListenTimeSeconds, dailyLimitSeconds]);
+  }, [status, isSessionActive, isPaused, isFreeTrial, dailyListenTimeSeconds, dailyLimitSeconds]);
 
   const startPulseAnimation = useCallback(() => {
     pulseScale.value = withRepeat(
@@ -596,7 +597,7 @@ export default function SessionScreen() {
       >
         <ThemedText style={styles.statusText}>{getStatusText()}</ThemedText>
 
-        {isTrial ? (
+        {isFreeTrial ? (
           <View style={[styles.countdownBadge, isLowTime ? styles.countdownBadgeWarning : null]}>
             <Feather 
               name="clock" 
