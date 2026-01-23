@@ -19,7 +19,6 @@ import { StoryBuddyColors, Spacing, BorderRadius, Typography } from '@/constants
 import type { RootStackParamList } from '@/navigation/RootStackNavigator';
 
 type PaywallRouteProp = RouteProp<RootStackParamList, 'Paywall'>;
-type PaywallNavProp = NativeStackNavigationProp<RootStackParamList, 'Paywall'>;
 
 const PLANS = [
   {
@@ -42,7 +41,7 @@ const PLANS = [
 const FEATURES = [
   { icon: 'book-open', text: 'Unlimited stories' },
   { icon: 'layers', text: 'All story collections' },
-  { icon: 'clock', text: '7-day free trial' },
+  { icon: 'gift', text: '7 bonus days free' },
   { icon: 'x-circle', text: 'Cancel anytime' },
 ];
 
@@ -50,28 +49,28 @@ export default function PaywallScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<PaywallRouteProp>();
-  const { startTrial, subscribe, isTrialExpired } = useSubscription();
+  const { startExtendedTrial, subscribe, isTrialExpired, dailyLimitReached, status } = useSubscription();
   
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('annual');
   const [isLoading, setIsLoading] = useState(false);
 
-  const fromTrialPrompt = route.params?.fromTrialPrompt ?? false;
-  const canDismiss = !isTrialExpired;
+  const fromDailyLimit = route.params?.fromDailyLimit ?? false;
+  const canDismiss = !isTrialExpired && !fromDailyLimit;
 
   const handleSelectPlan = (planId: 'monthly' | 'annual') => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedPlan(planId);
   };
 
-  const handleStartTrial = async () => {
+  const handleStartExtendedTrial = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsLoading(true);
     
     try {
-      await startTrial();
+      await startExtendedTrial();
       navigation.replace('SubscriptionSuccess', { plan: 'trial' });
     } catch (error) {
-      console.error('Failed to start trial:', error);
+      console.error('Failed to start extended trial:', error);
     } finally {
       setIsLoading(false);
     }
@@ -101,6 +100,31 @@ export default function PaywallScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
   };
 
+  const getHeaderContent = () => {
+    if (isTrialExpired) {
+      return {
+        icon: 'clock' as const,
+        title: "Your Trial Has Ended",
+        subtitle: "Subscribe now to continue enjoying unlimited magical stories",
+      };
+    }
+    if (fromDailyLimit || dailyLimitReached) {
+      return {
+        icon: 'zap' as const,
+        title: "You've Reached Today's Limit",
+        subtitle: "Upgrade now to get unlimited story time plus 7 extra days free!",
+      };
+    }
+    return {
+      icon: 'star' as const,
+      title: "Unlock Unlimited Stories",
+      subtitle: "Subscribe now and get 7 extra days free to explore all magical adventures!",
+    };
+  };
+
+  const headerContent = getHeaderContent();
+  const showExtendedTrialButton = status === 'free_trial' && !isTrialExpired;
+
   return (
     <LinearGradient
       colors={['#E8DEFF', '#F8F5FF', '#FFE8F0']}
@@ -123,16 +147,15 @@ export default function PaywallScreen() {
 
         <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.header}>
           <View style={styles.iconContainer}>
-            <Feather name={isTrialExpired ? "clock" : "star"} size={48} color={StoryBuddyColors.primary} />
+            <Feather name={headerContent.icon} size={48} color={StoryBuddyColors.primary} />
           </View>
-          <Text style={styles.title}>
-            {isTrialExpired ? "Your Trial Has Ended" : "Unlock Magical Stories"}
-          </Text>
-          <Text style={styles.subtitle}>
-            {isTrialExpired 
-              ? "Subscribe now to continue enjoying unlimited magical stories" 
-              : "Start your free 7-day trial and discover unlimited adventures"}
-          </Text>
+          <Text style={styles.title}>{headerContent.title}</Text>
+          <Text style={styles.subtitle}>{headerContent.subtitle}</Text>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(150).springify()} style={styles.bonusBanner}>
+          <Feather name="gift" size={20} color="#FFFFFF" />
+          <Text style={styles.bonusBannerText}>Get 7 Extra Days Free When You Subscribe!</Text>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.featuresContainer}>
@@ -188,25 +211,41 @@ export default function PaywallScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.ctaContainer}>
-          <Pressable
-            style={[styles.ctaButton, isLoading && styles.ctaButtonDisabled]}
-            onPress={isTrialExpired ? handleSubscribe : handleStartTrial}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.ctaText}>
-                {isTrialExpired ? "Subscribe Now" : "Start Free 7-Day Trial"}
+          {showExtendedTrialButton ? (
+            <>
+              <Pressable
+                style={[styles.ctaButton, isLoading && styles.ctaButtonDisabled]}
+                onPress={handleStartExtendedTrial}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.ctaText}>Start 7-Day Free Trial</Text>
+                )}
+              </Pressable>
+              <Text style={styles.ctaSubtext}>
+                Then {selectedPlan === 'annual' ? '$99/year' : '$9.99/month'}. Cancel anytime.
               </Text>
-            )}
-          </Pressable>
-          
-          <Text style={styles.ctaSubtext}>
-            {isTrialExpired 
-              ? `${selectedPlan === 'annual' ? '$99/year' : '$9.99/month'}. Cancel anytime.`
-              : `Then ${selectedPlan === 'annual' ? '$99/year' : '$9.99/month'}. Cancel anytime.`}
-          </Text>
+            </>
+          ) : (
+            <>
+              <Pressable
+                style={[styles.ctaButton, isLoading && styles.ctaButtonDisabled]}
+                onPress={handleSubscribe}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.ctaText}>Subscribe Now</Text>
+                )}
+              </Pressable>
+              <Text style={styles.ctaSubtext}>
+                {selectedPlan === 'annual' ? '$99/year' : '$9.99/month'}. Cancel anytime.
+              </Text>
+            </>
+          )}
 
           <Pressable onPress={handleRestore} style={styles.restoreButton}>
             <Text style={styles.restoreText}>Restore Purchases</Text>
@@ -239,7 +278,7 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginTop: Spacing['3xl'],
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   iconContainer: {
     width: 80,
@@ -262,6 +301,22 @@ const styles = StyleSheet.create({
     color: StoryBuddyColors.textSecondary,
     textAlign: 'center',
     paddingHorizontal: Spacing.lg,
+  },
+  bonusBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: StoryBuddyColors.primary,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  bonusBannerText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
   },
   featuresContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.8)',

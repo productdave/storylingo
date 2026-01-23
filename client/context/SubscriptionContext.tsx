@@ -2,17 +2,20 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = '@storytale_subscription';
+const DAILY_LIMIT_SECONDS = 900; // 15 minutes
 
-type SubscriptionStatus = 'none' | 'trial' | 'monthly' | 'annual';
+type SubscriptionStatus = 'none' | 'free_trial' | 'extended_trial' | 'monthly' | 'annual';
 
 interface SubscriptionData {
   status: SubscriptionStatus;
-  trialStartDate: string | null;
-  trialEndDate: string | null;
+  freeTrialStartDate: string | null;
+  freeTrialEndDate: string | null;
+  extendedTrialStartDate: string | null;
+  extendedTrialEndDate: string | null;
   subscriptionStartDate: string | null;
-  hasSeenTrialPrompt: boolean;
+  dailyListenTimeSeconds: number;
+  lastListenDate: string | null;
   totalListenTimeSeconds: number;
-  trialWasUsed: boolean;
 }
 
 interface SubscriptionContextType {
@@ -20,25 +23,27 @@ interface SubscriptionContextType {
   isLoading: boolean;
   trialDaysRemaining: number;
   hasActiveSubscription: boolean;
-  hasSeenTrialPrompt: boolean;
-  totalListenTimeSeconds: number;
+  dailyListenTimeSeconds: number;
+  dailyLimitReached: boolean;
+  dailyLimitSeconds: number;
   isTrialExpired: boolean;
-  startTrial: () => Promise<void>;
+  startExtendedTrial: () => Promise<void>;
   subscribe: (plan: 'monthly' | 'annual') => Promise<void>;
   restorePurchases: () => Promise<boolean>;
-  markTrialPromptSeen: () => Promise<void>;
   addListenTime: (seconds: number) => Promise<void>;
-  shouldShowTrialPrompt: () => boolean;
+  resetForTesting: () => Promise<void>;
 }
 
 const defaultData: SubscriptionData = {
   status: 'none',
-  trialStartDate: null,
-  trialEndDate: null,
+  freeTrialStartDate: null,
+  freeTrialEndDate: null,
+  extendedTrialStartDate: null,
+  extendedTrialEndDate: null,
   subscriptionStartDate: null,
-  hasSeenTrialPrompt: false,
+  dailyListenTimeSeconds: 0,
+  lastListenDate: null,
   totalListenTimeSeconds: 0,
-  trialWasUsed: false,
 };
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -51,32 +56,75 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     loadSubscriptionData();
   }, []);
 
+  const getTodayDateString = () => {
+    return new Date().toISOString().split('T')[0];
+  };
+
   const loadSubscriptionData = async () => {
     try {
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as SubscriptionData;
-        const updatedData = checkAndUpdateTrialStatus(parsed);
+        let updatedData = checkAndUpdateTrialStatus(parsed);
+        updatedData = resetDailyLimitIfNewDay(updatedData);
         setData(updatedData);
-        if (updatedData !== parsed) {
-          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedData));
-        }
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedData));
+      } else {
+        const initialData = startFreeTrial(defaultData);
+        setData(initialData);
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(initialData));
       }
     } catch (error) {
       console.error('Failed to load subscription data:', error);
+      const initialData = startFreeTrial(defaultData);
+      setData(initialData);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const startFreeTrial = (currentData: SubscriptionData): SubscriptionData => {
+    const now = new Date();
+    const trialEnd = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+    
+    return {
+      ...currentData,
+      status: 'free_trial',
+      freeTrialStartDate: now.toISOString(),
+      freeTrialEndDate: trialEnd.toISOString(),
+      lastListenDate: getTodayDateString(),
+    };
+  };
+
+  const resetDailyLimitIfNewDay = (subscriptionData: SubscriptionData): SubscriptionData => {
+    const today = getTodayDateString();
+    if (subscriptionData.lastListenDate !== today) {
+      return {
+        ...subscriptionData,
+        dailyListenTimeSeconds: 0,
+        lastListenDate: today,
+      };
+    }
+    return subscriptionData;
+  };
+
   const checkAndUpdateTrialStatus = (subscriptionData: SubscriptionData): SubscriptionData => {
-    if (subscriptionData.status === 'trial' && subscriptionData.trialEndDate) {
-      const now = new Date();
-      const endDate = new Date(subscriptionData.trialEndDate);
+    const now = new Date();
+    
+    if (subscriptionData.status === 'extended_trial' && subscriptionData.extendedTrialEndDate) {
+      const endDate = new Date(subscriptionData.extendedTrialEndDate);
       if (now > endDate) {
-        return { ...subscriptionData, status: 'none', trialWasUsed: true };
+        return { ...subscriptionData, status: 'none' };
       }
     }
+    
+    if (subscriptionData.status === 'free_trial' && subscriptionData.freeTrialEndDate) {
+      const endDate = new Date(subscriptionData.freeTrialEndDate);
+      if (now > endDate) {
+        return { ...subscriptionData, status: 'none' };
+      }
+    }
+    
     return subscriptionData;
   };
 
@@ -86,25 +134,35 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   };
 
   const calculateTrialDaysRemaining = useCallback((): number => {
-    if (data.status !== 'trial' || !data.trialEndDate) return 0;
-    const now = new Date();
-    const endDate = new Date(data.trialEndDate);
-    const diffTime = endDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return Math.max(0, diffDays);
-  }, [data.status, data.trialEndDate]);
+    if (data.status === 'free_trial' && data.freeTrialEndDate) {
+      const now = new Date();
+      const endDate = new Date(data.freeTrialEndDate);
+      const diffTime = endDate.getTime() - now.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return Math.max(0, diffDays);
+    }
+    
+    if (data.status === 'extended_trial' && data.extendedTrialEndDate) {
+      const now = new Date();
+      const endDate = new Date(data.extendedTrialEndDate);
+      const diffTime = endDate.getTime() - now.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return Math.max(0, diffDays);
+    }
+    
+    return 0;
+  }, [data.status, data.freeTrialEndDate, data.extendedTrialEndDate]);
 
-  const startTrial = async () => {
+  const startExtendedTrial = async () => {
     const now = new Date();
     const trialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     
     await saveData({
       ...data,
-      status: 'trial',
-      trialStartDate: now.toISOString(),
-      trialEndDate: trialEnd.toISOString(),
-      hasSeenTrialPrompt: true,
-      trialWasUsed: true,
+      status: 'extended_trial',
+      extendedTrialStartDate: now.toISOString(),
+      extendedTrialEndDate: trialEnd.toISOString(),
+      dailyListenTimeSeconds: 0,
     });
   };
 
@@ -113,7 +171,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       ...data,
       status: plan,
       subscriptionStartDate: new Date().toISOString(),
-      hasSeenTrialPrompt: true,
     });
   };
 
@@ -121,29 +178,45 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     return false;
   };
 
-  const markTrialPromptSeen = async () => {
-    await saveData({
-      ...data,
-      hasSeenTrialPrompt: true,
-    });
-  };
-
   const addListenTime = async (seconds: number) => {
+    const today = getTodayDateString();
+    let updatedData = data;
+    
+    if (data.lastListenDate !== today) {
+      updatedData = {
+        ...data,
+        dailyListenTimeSeconds: 0,
+        lastListenDate: today,
+      };
+    }
+    
     await saveData({
-      ...data,
-      totalListenTimeSeconds: data.totalListenTimeSeconds + seconds,
+      ...updatedData,
+      dailyListenTimeSeconds: updatedData.dailyListenTimeSeconds + seconds,
+      totalListenTimeSeconds: updatedData.totalListenTimeSeconds + seconds,
+      lastListenDate: today,
     });
   };
 
-  const shouldShowTrialPrompt = (): boolean => {
-    if (data.hasSeenTrialPrompt) return false;
-    if (data.status !== 'none') return false;
-    return data.totalListenTimeSeconds >= 10; // Change to 300 for 5 minutes
+  const resetForTesting = async () => {
+    await AsyncStorage.removeItem(STORAGE_KEY);
+    const initialData = startFreeTrial(defaultData);
+    setData(initialData);
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(initialData));
   };
 
-  const hasActiveSubscription = data.status === 'trial' || data.status === 'monthly' || data.status === 'annual';
+  const hasActiveSubscription = 
+    data.status === 'free_trial' || 
+    data.status === 'extended_trial' || 
+    data.status === 'monthly' || 
+    data.status === 'annual';
   
-  const isTrialExpired = data.trialWasUsed && data.status === 'none';
+  const isTrialExpired = data.status === 'none' && 
+    (data.freeTrialEndDate !== null || data.extendedTrialEndDate !== null);
+  
+  const dailyLimitReached = 
+    (data.status === 'free_trial' || data.status === 'extended_trial') && 
+    data.dailyListenTimeSeconds >= DAILY_LIMIT_SECONDS;
 
   return (
     <SubscriptionContext.Provider
@@ -152,15 +225,15 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         isLoading,
         trialDaysRemaining: calculateTrialDaysRemaining(),
         hasActiveSubscription,
-        hasSeenTrialPrompt: data.hasSeenTrialPrompt,
-        totalListenTimeSeconds: data.totalListenTimeSeconds,
+        dailyListenTimeSeconds: data.dailyListenTimeSeconds,
+        dailyLimitReached,
+        dailyLimitSeconds: DAILY_LIMIT_SECONDS,
         isTrialExpired,
-        startTrial,
+        startExtendedTrial,
         subscribe,
         restorePurchases,
-        markTrialPromptSeen,
         addListenTime,
-        shouldShowTrialPrompt,
+        resetForTesting,
       }}
     >
       {children}
