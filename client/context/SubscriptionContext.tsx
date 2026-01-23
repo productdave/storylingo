@@ -65,8 +65,15 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as SubscriptionData;
-        let updatedData = checkAndUpdateTrialStatus(parsed);
+        let updatedData = migrateOldData(parsed);
+        updatedData = checkAndUpdateTrialStatus(updatedData);
         updatedData = resetDailyLimitIfNewDay(updatedData);
+        
+        // If status is 'none' and no trial was ever started, start free trial
+        if (updatedData.status === 'none' && !updatedData.freeTrialStartDate) {
+          updatedData = startFreeTrial(updatedData);
+        }
+        
         setData(updatedData);
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedData));
       } else {
@@ -81,6 +88,21 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  // Migrate old subscription data format to new format
+  const migrateOldData = (oldData: any): SubscriptionData => {
+    // Handle old 'trial' status from previous implementation
+    if (oldData.status === 'trial') {
+      return {
+        ...defaultData,
+        ...oldData,
+        status: 'free_trial',
+        freeTrialStartDate: oldData.trialStartDate || oldData.freeTrialStartDate || new Date().toISOString(),
+        freeTrialEndDate: oldData.trialEndDate || oldData.freeTrialEndDate || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+    }
+    return { ...defaultData, ...oldData };
   };
 
   const startFreeTrial = (currentData: SubscriptionData): SubscriptionData => {
