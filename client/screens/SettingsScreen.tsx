@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   Alert,
   Linking,
   Platform,
+  TextInput,
+  Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,6 +21,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSubscription } from '@/context/SubscriptionContext';
 import { StoryBuddyColors, Spacing, BorderRadius, Typography } from '@/constants/theme';
 import type { RootStackParamList } from '@/navigation/RootStackNavigator';
+
+const DEV_PASSWORD = '3268';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -35,9 +39,35 @@ export default function SettingsScreen() {
     simulateExpiredTrial,
   } = useSubscription();
   
+  const [showDevMode, setShowDevMode] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  
   // Daily limit only applies to free trial (before signing up for any plan)
   const isFreeTrial = status === 'free_trial';
   const remainingMinutes = Math.ceil(Math.max(0, dailyLimitSeconds - dailyListenTimeSeconds) / 60);
+
+  const handleVersionTap = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (showDevMode) {
+      setShowDevMode(false);
+    } else {
+      setShowPasswordModal(true);
+    }
+  };
+
+  const handlePasswordSubmit = () => {
+    if (passwordInput === DEV_PASSWORD) {
+      setShowDevMode(true);
+      setShowPasswordModal(false);
+      setPasswordInput('');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Incorrect Password', 'Please try again.');
+      setPasswordInput('');
+    }
+  };
 
   const getSubscriptionStatusText = () => {
     switch (status) {
@@ -193,45 +223,88 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Testing (Development Only)</Text>
-          
-          <Pressable 
-            style={styles.menuItem} 
-            onPress={async () => {
-              await simulateExpiredTrial();
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              Alert.alert('Testing', 'Trial has been expired. Go back and tap a story to see the paywall.');
-            }}
-          >
-            <View style={styles.menuItemLeft}>
-              <View style={[styles.menuIconContainer, { backgroundColor: 'rgba(255, 107, 107, 0.1)' }]}>
-                <Feather name="x-circle" size={20} color={StoryBuddyColors.error} />
+        {showDevMode ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Developer Tools</Text>
+            
+            <Pressable 
+              style={styles.menuItem} 
+              onPress={async () => {
+                await simulateExpiredTrial();
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                Alert.alert('Testing', 'Trial has been expired. Go back and tap a story to see the paywall.');
+              }}
+            >
+              <View style={styles.menuItemLeft}>
+                <View style={[styles.menuIconContainer, { backgroundColor: 'rgba(255, 107, 107, 0.1)' }]}>
+                  <Feather name="x-circle" size={20} color={StoryBuddyColors.error} />
+                </View>
+                <Text style={styles.menuItemText}>Simulate Expired Trial</Text>
               </View>
-              <Text style={styles.menuItemText}>Simulate Expired Trial</Text>
-            </View>
-            <Feather name="chevron-right" size={20} color={StoryBuddyColors.textSecondary} />
-          </Pressable>
+              <Feather name="chevron-right" size={20} color={StoryBuddyColors.textSecondary} />
+            </Pressable>
 
-          <Pressable 
-            style={styles.menuItem}
-            onPress={async () => {
-              await resetForTesting();
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              Alert.alert('Testing', 'Subscription reset to new 3-day free trial.');
-            }}
-          >
-            <View style={styles.menuItemLeft}>
-              <View style={[styles.menuIconContainer, { backgroundColor: 'rgba(78, 205, 196, 0.1)' }]}>
-                <Feather name="rotate-ccw" size={20} color={StoryBuddyColors.success} />
+            <Pressable 
+              style={styles.menuItem}
+              onPress={async () => {
+                await resetForTesting();
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                Alert.alert('Testing', 'Subscription reset to new 3-day free trial.');
+              }}
+            >
+              <View style={styles.menuItemLeft}>
+                <View style={[styles.menuIconContainer, { backgroundColor: 'rgba(78, 205, 196, 0.1)' }]}>
+                  <Feather name="rotate-ccw" size={20} color={StoryBuddyColors.success} />
+                </View>
+                <Text style={styles.menuItemText}>Reset to New User (3-day trial)</Text>
               </View>
-              <Text style={styles.menuItemText}>Reset to New User (3-day trial)</Text>
-            </View>
-            <Feather name="chevron-right" size={20} color={StoryBuddyColors.textSecondary} />
-          </Pressable>
-        </View>
+              <Feather name="chevron-right" size={20} color={StoryBuddyColors.textSecondary} />
+            </Pressable>
+          </View>
+        ) : null}
 
-        <Text style={styles.versionText}>StoryTale v1.0.0</Text>
+        <Pressable onPress={handleVersionTap}>
+          <Text style={styles.versionText}>StoryTale v1.0.0</Text>
+        </Pressable>
+
+        <Modal
+          visible={showPasswordModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowPasswordModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Enter Developer Password</Text>
+              <TextInput
+                style={styles.passwordInput}
+                value={passwordInput}
+                onChangeText={setPasswordInput}
+                placeholder="Password"
+                secureTextEntry
+                keyboardType="number-pad"
+                autoFocus
+              />
+              <View style={styles.modalButtons}>
+                <Pressable 
+                  style={styles.modalCancelButton}
+                  onPress={() => {
+                    setShowPasswordModal(false);
+                    setPasswordInput('');
+                  }}
+                >
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </Pressable>
+                <Pressable 
+                  style={styles.modalSubmitButton}
+                  onPress={handlePasswordSubmit}
+                >
+                  <Text style={styles.modalSubmitText}>Enter</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </LinearGradient>
   );
@@ -362,5 +435,59 @@ const styles = StyleSheet.create({
     color: StoryBuddyColors.textSecondary,
     textAlign: 'center',
     marginTop: Spacing.lg,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    width: '80%',
+    maxWidth: 300,
+  },
+  modalTitle: {
+    ...Typography.h4,
+    color: StoryBuddyColors.textPrimary,
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
+  },
+  passwordInput: {
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    fontSize: 18,
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: StoryBuddyColors.textSecondary,
+    fontWeight: '600',
+  },
+  modalSubmitButton: {
+    flex: 1,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    backgroundColor: StoryBuddyColors.primary,
+    alignItems: 'center',
+  },
+  modalSubmitText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });
