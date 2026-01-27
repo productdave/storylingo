@@ -5,9 +5,49 @@ export interface Story {
   context: string;
   image: any;
   macroBeats: string[];
+  isInteractive?: boolean;
 }
 
+export interface ComingSoonStory {
+  id: string;
+  title: string;
+  description: string;
+}
+
+export const COMING_SOON_STORIES: ComingSoonStory[] = [
+  {
+    id: "little-mermaid",
+    title: "The Little Mermaid",
+    description: "A mermaid princess dreams of life on land",
+  },
+  {
+    id: "sleeping-beauty",
+    title: "Sleeping Beauty",
+    description: "A princess cursed to sleep for 100 years",
+  },
+];
+
 export const STORIES: Story[] = [
+  {
+    id: "your-adventure",
+    title: "Your Adventure",
+    description: "Create your own magical story with AI",
+    context: "This is a special choose-your-own-adventure story where you decide what happens! The storyteller will ask you what kind of adventure you want, who you want to be, and where you want to go. Every choice you make shapes the story!",
+    image: require("../../attached_assets/generated_images/your_adventure_story_card.png"),
+    macroBeats: [
+      "The storyteller welcomes you and asks what kind of adventure you'd like to have",
+      "You choose your character - who will you be in this story?",
+      "You decide where your adventure takes place - a magical forest, an underwater kingdom, outer space, or somewhere else",
+      "Your adventure begins with an exciting discovery or meeting",
+      "You face your first choice that changes the direction of the story",
+      "A challenge or puzzle appears that you must solve your way",
+      "You make a new friend or ally who joins your adventure",
+      "The big moment arrives - how will you face it?",
+      "Your choices lead to a unique and satisfying ending",
+      "The storyteller celebrates your adventure and asks if you'd like another"
+    ],
+    isInteractive: true,
+  },
   {
     id: "snow-white",
     title: "Snow White",
