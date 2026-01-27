@@ -15,8 +15,8 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 
 import { ThemedText } from "@/components/ThemedText";
-import { Spacing, BorderRadius, StoryBuddyColors } from "@/constants/theme";
-import { STORIES, Story } from "@/constants/stories";
+import { Spacing, BorderRadius, StoryBuddyColors, Typography } from "@/constants/theme";
+import { STORIES, Story, COMING_SOON_STORIES } from "@/constants/stories";
 import { useLanguage, getStoryTranslation, Language, TranslationType } from "@/context/LanguageContext";
 import { useSubscription } from "@/context/SubscriptionContext";
 import type { RootStackParamList } from "@/navigation/RootStackNavigator";
@@ -221,6 +221,24 @@ export default function StorySelectionScreen() {
             t={t}
           />
         ))}
+        
+        <View style={styles.comingSoonSection}>
+          <ThemedText style={styles.comingSoonTitle}>{t.comingSoon}</ThemedText>
+          {COMING_SOON_STORIES.map((story) => {
+            const storyTranslation = getStoryTranslation(t, story.id);
+            return (
+              <View key={story.id} style={styles.comingSoonCard}>
+                <View style={styles.comingSoonIconContainer}>
+                  <Feather name="lock" size={20} color={StoryBuddyColors.textSecondary} />
+                </View>
+                <View style={styles.comingSoonTextContainer}>
+                  <ThemedText style={styles.comingSoonStoryTitle}>{storyTranslation.title}</ThemedText>
+                  <ThemedText style={styles.comingSoonDescription}>{storyTranslation.description}</ThemedText>
+                </View>
+              </View>
+            );
+          })}
+        </View>
       </ScrollView>
     </LinearGradient>
   );
@@ -366,5 +384,51 @@ const styles = StyleSheet.create({
   storyDescription: {
     fontSize: 14,
     color: "rgba(255, 255, 255, 0.9)",
+  },
+  comingSoonSection: {
+    marginTop: Spacing.lg,
+    paddingTop: Spacing.xl,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0, 0, 0, 0.08)",
+  },
+  comingSoonTitle: {
+    ...Typography.h4,
+    color: StoryBuddyColors.textSecondary,
+    marginBottom: Spacing.md,
+    textAlign: "center",
+  },
+  comingSoonCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.6)",
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.05)",
+    borderStyle: "dashed",
+  },
+  comingSoonIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(0, 0, 0, 0.05)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: Spacing.md,
+  },
+  comingSoonTextContainer: {
+    flex: 1,
+  },
+  comingSoonStoryTitle: {
+    ...Typography.body,
+    fontWeight: "600",
+    color: StoryBuddyColors.textSecondary,
+    marginBottom: 2,
+  },
+  comingSoonDescription: {
+    ...Typography.small,
+    color: StoryBuddyColors.textSecondary,
+    opacity: 0.8,
   },
 });
