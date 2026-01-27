@@ -254,6 +254,7 @@ export default function SessionScreen() {
           storyContext: story.context,
           macroBeats: story.macroBeats,
           language: language,
+          isInteractive: story.isInteractive || false,
         }),
       });
 
