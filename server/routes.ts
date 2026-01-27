@@ -2,11 +2,25 @@ import type { Express } from "express";
 import { createServer, type Server } from "node:http";
 import { getLanguageConfig } from "./languageConfig";
 
+const INTERACTIVE_STORY_CONTEXT = `This is an interactive choose-your-own-adventure story. Unlike pre-written tales, YOU will create a unique story based entirely on the child's choices.
+
+INTERACTIVE STORYTELLING RULES:
+1. At every turn, give the child meaningful choices that genuinely affect the story direction
+2. Never follow a predetermined plot - let the child's imagination guide where the story goes
+3. Build the story world based on what the child wants: their character, setting, companions, and challenges
+4. Make choices feel impactful - if they choose to befriend a dragon, the story should center on that friendship
+5. Create surprise and delight based on their choices - reward creative ideas with magical outcomes
+6. Keep the tone playful and empowering - the child is the hero and their choices matter
+7. Use open-ended questions like "What do you want to do?" alongside specific choices
+8. Remember and reference earlier choices to create a cohesive narrative
+
+The macro beats are flexible guidelines, not strict plot points. Adapt them to whatever adventure the child chooses to create.`;
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/token - Create an ephemeral client secret for OpenAI Realtime API (GA version)
   app.post("/api/token", async (req, res) => {
     try {
-      const { storyId, storyTitle, storyContext, macroBeats, language } = req.body;
+      const { storyId, storyTitle, storyContext, macroBeats, language, isInteractive } = req.body;
 
       if (!storyId || !storyTitle || !macroBeats) {
         return res.status(400).json({ error: "Missing story information" });
@@ -20,8 +34,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .map((beat: string, i: number) => `${i + 1}. ${beat}`)
         .join("\n");
 
-      // Add language instruction to story context
-      const enhancedContext = `${langConfig.languageInstruction}\n\n${storyContext || `A classic tale of ${storyTitle}`}`;
+      // Add language instruction and special context for interactive stories
+      let enhancedContext = langConfig.languageInstruction;
+      if (isInteractive) {
+        enhancedContext += `\n\n${INTERACTIVE_STORY_CONTEXT}\n\n${storyContext || 'An open-ended adventure where the child creates their own story.'}`;
+      } else {
+        enhancedContext += `\n\n${storyContext || `A classic tale of ${storyTitle}`}`;
+      }
 
       // Log the variables being sent
       console.log("=== Token Request ===");
