@@ -1,6 +1,24 @@
 {
   "chooseYourStory": "Elige Tu Historia",
+  "comingSoon": "Próximamente",
   "stories": {
+    "your-adventure": {
+      "title": "Tu Aventura",
+      "description": "Crea tu propia historia mágica con IA",
+      "context": "¡Esta es una historia especial de elige tu propia aventura donde tú decides lo que pasa! El narrador te preguntará qué tipo de aventura quieres, quién quieres ser y a dónde quieres ir. ¡Cada elección que hagas dará forma a la historia!",
+      "macroBeats": [
+        "El narrador te da la bienvenida y te pregunta qué tipo de aventura te gustaría tener",
+        "Eliges tu personaje - ¿quién serás en esta historia?",
+        "Decides dónde tiene lugar tu aventura - un bosque mágico, un reino submarino, el espacio exterior u otro lugar",
+        "Tu aventura comienza con un descubrimiento o encuentro emocionante",
+        "Enfrentas tu primera elección que cambia la dirección de la historia",
+        "Aparece un desafío o acertijo que debes resolver a tu manera",
+        "Haces un nuevo amigo o aliado que se une a tu aventura",
+        "Llega el gran momento - ¿cómo lo enfrentarás?",
+        "Tus elecciones llevan a un final único y satisfactorio",
+        "El narrador celebra tu aventura y te pregunta si quieres otra"
+      ]
+    },
     "snow-white": {
       "title": "Blancanieves",
       "description": "Una princesa, siete enanitos y una aventura mágica",
@@ -45,6 +63,14 @@
         "Garfio es derrotado; los niños celebran su victoria",
         "Los niños Darling regresan a casa sanos y salvos; Peter Pan sigue siendo su amigo para siempre"
       ]
+    },
+    "little-mermaid": {
+      "title": "La Sirenita",
+      "description": "Una princesa sirena sueña con la vida en tierra"
+    },
+    "sleeping-beauty": {
+      "title": "La Bella Durmiente",
+      "description": "Una princesa maldecida a dormir por 100 años"
     }
   },
   "session": {
