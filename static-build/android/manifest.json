@@ -1,0 +1,122 @@
+{
+  "id": "255a9ed9-31ae-4c7b-8352-85af69abde86",
+  "createdAt": "2026-01-29T22:21:52.571Z",
+  "runtimeVersion": "exposdk:54.0.0",
+  "launchAsset": {
+    "key": "bundle-1769725312571-8455",
+    "contentType": "application/javascript",
+    "url": "https://57498493-ef2c-4fb6-bb59-8312a7bfa7c3-00-2mtwvx1zx58p5.picard.replit.dev/1769725312571-8455/_expo/static/js/android/bundle.js"
+  },
+  "assets": [],
+  "metadata": {},
+  "extra": {
+    "eas": {},
+    "expoClient": {
+      "name": "StoryLingo",
+      "slug": "story-buddy",
+      "version": "1.0.0",
+      "orientation": "portrait",
+      "icon": "./assets/images/icon.png",
+      "scheme": "storybuddy",
+      "userInterfaceStyle": "automatic",
+      "newArchEnabled": true,
+      "ios": {
+        "supportsTablet": true,
+        "bundleIdentifier": "com.storybuddy.app",
+        "infoPlist": {
+          "NSMicrophoneUsageDescription": "StoryLingo needs microphone access so you can practice speaking with your storyteller friend."
+        }
+      },
+      "android": {
+        "adaptiveIcon": {
+          "backgroundColor": "#F8F5FF",
+          "foregroundImage": "./assets/images/android-icon-foreground.png",
+          "backgroundImage": "./assets/images/android-icon-background.png",
+          "monochromeImage": "./assets/images/android-icon-monochrome.png",
+          "foregroundImageUrl": "https://57498493-ef2c-4fb6-bb59-8312a7bfa7c3-00-2mtwvx1zx58p5.picard.replit.dev/assets/./assets/images/android-icon-foreground.png",
+          "monochromeImageUrl": "https://57498493-ef2c-4fb6-bb59-8312a7bfa7c3-00-2mtwvx1zx58p5.picard.replit.dev/assets/./assets/images/android-icon-monochrome.png",
+          "backgroundImageUrl": "https://57498493-ef2c-4fb6-bb59-8312a7bfa7c3-00-2mtwvx1zx58p5.picard.replit.dev/assets/./assets/images/android-icon-background.png"
+        },
+        "edgeToEdgeEnabled": true,
+        "predictiveBackGestureEnabled": false,
+        "package": "com.storybuddy.app",
+        "permissions": [
+          "android.permission.RECORD_AUDIO",
+          "android.permission.MODIFY_AUDIO_SETTINGS"
+        ]
+      },
+      "web": {
+        "output": "single",
+        "favicon": "./assets/images/favicon.png"
+      },
+      "plugins": [
+        [
+          "expo-splash-screen",
+          {
+            "image": "./assets/images/splash-icon.png",
+            "imageWidth": 200,
+            "resizeMode": "contain",
+            "backgroundColor": "#F8F5FF",
+            "dark": {
+              "backgroundColor": "#2D1B4E"
+            }
+          }
+        ],
+        "expo-web-browser",
+        [
+          "expo-audio",
+          {
+            "microphonePermission": "StoryLingo needs microphone access so you can practice speaking with your storyteller friend."
+          }
+        ]
+      ],
+      "experiments": {
+        "reactCompiler": true
+      },
+      "_internal": {
+        "isDebug": false,
+        "projectRoot": "/home/runner/workspace",
+        "dynamicConfigPath": {},
+        "staticConfigPath": "/home/runner/workspace/app.json",
+        "packageJsonPath": "/home/runner/workspace/package.json",
+        "pluginHistory": {
+          "expo-splash-screen": {
+            "name": "expo-splash-screen",
+            "version": "31.0.11"
+          },
+          "expo-web-browser": {
+            "name": "expo-web-browser",
+            "version": "15.0.9"
+          },
+          "expo-audio": {
+            "name": "expo-audio",
+            "version": "1.1.1"
+          }
+        }
+      },
+      "sdkVersion": "54.0.0",
+      "platforms": [
+        "ios",
+        "android",
+        "web"
+      ],
+      "androidStatusBar": {
+        "backgroundColor": "#F8F5FF"
+      },
+      "iconUrl": "https://57498493-ef2c-4fb6-bb59-8312a7bfa7c3-00-2mtwvx1zx58p5.picard.replit.dev/assets/./assets/images/icon.png",
+      "hostUri": "57498493-ef2c-4fb6-bb59-8312a7bfa7c3-00-2mtwvx1zx58p5.picard.replit.dev/android"
+    },
+    "expoGo": {
+      "debuggerHost": "57498493-ef2c-4fb6-bb59-8312a7bfa7c3-00-2mtwvx1zx58p5.picard.replit.dev/android",
+      "developer": {
+        "tool": "expo-cli",
+        "projectRoot": "/home/runner/workspace"
+      },
+      "packagerOpts": {
+        "dev": false
+      },
+      "mainModuleName": "client/index"
+    },
+    "scopeKey": "@anonymous/story-buddy-54c96820-481c-4ab8-a7c0-635b81ba6284"
+  }
+}
