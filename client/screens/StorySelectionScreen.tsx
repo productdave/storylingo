@@ -224,6 +224,20 @@ export default function StorySelectionScreen() {
         
         <View style={styles.comingSoonSection}>
           <ThemedText style={styles.comingSoonTitle}>{t.comingSoon}</ThemedText>
+          
+          <View style={styles.featureComingSoonCard}>
+            <View style={styles.featureComingSoonIconContainer}>
+              <Feather name="book-open" size={24} color={StoryBuddyColors.secondary} />
+            </View>
+            <View style={styles.comingSoonTextContainer}>
+              <ThemedText style={styles.featureComingSoonTitle}>{t.vocabularyPractice.title}</ThemedText>
+              <ThemedText style={styles.comingSoonDescription}>{t.vocabularyPractice.description}</ThemedText>
+            </View>
+            <View style={styles.comingSoonBadge}>
+              <ThemedText style={styles.comingSoonBadgeText}>{t.comingSoon}</ThemedText>
+            </View>
+          </View>
+          
           {COMING_SOON_STORIES.map((story) => {
             const storyTranslation = getStoryTranslation(t, story.id);
             return (
@@ -430,5 +444,41 @@ const styles = StyleSheet.create({
     ...Typography.small,
     color: StoryBuddyColors.textSecondary,
     opacity: 0.8,
+  },
+  featureComingSoonCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 217, 61, 0.15)",
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: "rgba(255, 217, 61, 0.3)",
+  },
+  featureComingSoonIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 217, 61, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: Spacing.md,
+  },
+  featureComingSoonTitle: {
+    ...Typography.body,
+    fontWeight: "700",
+    color: StoryBuddyColors.textPrimary,
+    marginBottom: 2,
+  },
+  comingSoonBadge: {
+    backgroundColor: StoryBuddyColors.secondary,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.full,
+  },
+  comingSoonBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: StoryBuddyColors.textPrimary,
   },
 });

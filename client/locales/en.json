@@ -1,6 +1,10 @@
 {
   "chooseYourStory": "Choose Your Story",
   "comingSoon": "Coming Soon",
+  "vocabularyPractice": {
+    "title": "Vocabulary Practice",
+    "description": "Tap and practice key words from each story"
+  },
   "stories": {
     "your-adventure": {
       "title": "Your Adventure",

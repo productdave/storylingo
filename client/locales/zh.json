@@ -1,6 +1,10 @@
 {
   "chooseYourStory": "选择你的故事",
   "comingSoon": "即将推出",
+  "vocabularyPractice": {
+    "title": "词汇练习",
+    "description": "点击并练习每个故事中的关键词"
+  },
   "stories": {
     "your-adventure": {
       "title": "你的冒险",

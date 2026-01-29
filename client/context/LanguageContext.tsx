@@ -15,7 +15,7 @@ const translations: Record<Language, TranslationType> = {
   es: esTranslations,
 };
 
-const LANGUAGE_STORAGE_KEY = "@storytale_language";
+const LANGUAGE_STORAGE_KEY = "@storylingo_language";
 
 interface LanguageContextType {
   language: Language;
