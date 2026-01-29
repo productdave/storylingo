@@ -264,7 +264,7 @@ export default function SettingsScreen() {
         ) : null}
 
         <Pressable onPress={handleVersionTap}>
-          <Text style={styles.versionText}>StoryTale v1.0.0</Text>
+          <Text style={styles.versionText}>StoryLingo v1.0.0</Text>
         </Pressable>
 
         <Modal

@@ -407,7 +407,7 @@ export default function SessionScreen() {
       setStatus("error");
       Alert.alert(
         "Connection Error",
-        "Could not connect to StoryTale. Please try again."
+        "Could not connect to StoryLingo. Please try again."
       );
     }
   }, [story, startPulseAnimation, stopPulseAnimation]);
@@ -417,7 +417,7 @@ export default function SessionScreen() {
     // In a production app, you would implement react-native-webrtc or use a WebSocket fallback
     Alert.alert(
       "Voice Chat",
-      "For the best voice experience, please use StoryTale in a web browser. Scan the QR code and choose 'Open in browser' instead of Expo Go.",
+      "For the best voice experience, please use StoryLingo in a web browser. Scan the QR code and choose 'Open in browser' instead of Expo Go.",
       [{ text: "OK", onPress: () => setStatus("idle") }]
     );
     setStatus("idle");
