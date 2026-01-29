@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "node:http";
 import { getLanguageConfig } from "./languageConfig";
+import * as fs from "fs";
+import * as path from "path";
 
 const INTERACTIVE_STORY_CONTEXT = `This is an interactive choose-your-own-adventure story. Unlike pre-written tales, YOU will create a unique story based entirely on the child's choices.
 
@@ -17,6 +19,14 @@ INTERACTIVE STORYTELLING RULES:
 The macro beats are flexible guidelines, not strict plot points. Adapt them to whatever adventure the child chooses to create.`;
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // GET /cover - Serve the cover image page
+  app.get("/cover", (req, res) => {
+    const templatePath = path.resolve(process.cwd(), "server", "templates", "cover-image.html");
+    const html = fs.readFileSync(templatePath, "utf-8");
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(html);
+  });
+
   // POST /api/token - Create an ephemeral client secret for OpenAI Realtime API (GA version)
   app.post("/api/token", async (req, res) => {
     try {
