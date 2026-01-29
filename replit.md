@@ -1,13 +1,14 @@
-# StoryTale
+# StoryLingo
 
-A voice-first interactive storyteller app for children ages 3-10. Children can have real-time voice conversations with an AI storyteller who guides them through classic fairy tales.
+A voice-first immersive language learning app for children ages 3-5. Children learn new languages through interactive storytelling where the AI speaks entirely in the target language.
 
 ## Overview
 
-StoryTale uses OpenAI's Realtime API (GA version) to create interactive, voice-based storytelling experiences. Children select a story (Snow White, Rapunzel, or Peter Pan) and then engage in a voice conversation with the AI storyteller who:
-- Asks for the child's name, age, and favorite things
-- Tells the story with the child as a participant
-- Offers choices and interactive moments throughout
+StoryLingo uses OpenAI's Realtime API (GA version) to create immersive, voice-based language learning experiences through storytelling. Children select a story and a target language, then engage in a voice conversation with the AI storyteller who:
+- Speaks ONLY in the target language (immersive learning approach)
+- Uses simple vocabulary and short sentences appropriate for ages 3-5
+- Repeats key words naturally to reinforce learning
+- Encourages children to repeat words and phrases
 - Keeps content safe and age-appropriate
 
 ## Project Structure
@@ -25,7 +26,8 @@ StoryTale uses OpenAI's Realtime API (GA version) to create interactive, voice-b
 │   │   ├── theme.ts       # Colors, spacing, typography
 │   │   └── stories.ts     # Story IDs and image mappings
 │   ├── context/
-│   │   └── LanguageContext.tsx     # Global language state with AsyncStorage persistence
+│   │   ├── LanguageContext.tsx     # Global language state with AsyncStorage persistence
+│   │   └── SubscriptionContext.tsx # Subscription/trial management
 │   ├── locales/           # Translation files (JSON)
 │   │   ├── en.json        # English translations + story content
 │   │   ├── zh.json        # Chinese translations + story content
@@ -41,16 +43,17 @@ StoryTale uses OpenAI's Realtime API (GA version) to create interactive, voice-b
 ## Key Features
 
 1. **Home Screen**: Welcome page with animated mascot and Start button
-2. **Story Selection**: Three story cards with watercolor illustrations
+2. **Story Selection**: Story cards with watercolor illustrations + language toggle
 3. **Session Screen**: 
-   - Large Talk button (tap to connect)
+   - Large Talk button (tap to pause/resume)
    - Status indicator (Connecting/Listening/Speaking)
-   - Stop and Start Again controls
+   - Back and Mute controls
+4. **Vocabulary Practice (Coming Soon)**: AI-generated keywords from stories that kids can tap and practice
 
 ## API Endpoints
 
 - `POST /api/token` - Creates ephemeral client secret for OpenAI Realtime API
-  - Request body: `{ storyId, storyTitle, macroBeats }`
+  - Request body: `{ storyId, storyTitle, storyContext, macroBeats, language, isInteractive }`
   - Response: `{ client_secret, expires_at }`
   - Uses the GA endpoint: `https://api.openai.com/v1/realtime/client_secrets`
 
@@ -98,21 +101,21 @@ The app supports multiple languages with a scalable architecture:
 
 ### Client-Side
 - **LanguageContext**: Global state provider wraps entire app
-  - Language preference persists in AsyncStorage (key: `@storytale_language`)
+  - Language preference persists in AsyncStorage (key: `@storylingo_language`)
   - Provides `useTranslation()` hook for components
   - Includes `t()` function for nested key access (e.g., `t('stories.snow-white.title')`)
   - Includes `getStory(storyId)` for full story object with localized content
 
 ### Translation Files (client/locales/*.json)
 Each language file contains:
-- UI strings (chooseYourStory, session.connecting, etc.)
+- UI strings (chooseYourStory, session.connecting, vocabularyPractice, etc.)
 - Story content (title, description, context, macroBeats per story)
 - Voice agent messages (initiationMessage, pauseMessage, resumeMessage)
 
 ### Server-Side (server/languageConfig.ts)
-- Language-specific prompt IDs (currently same prompt, extensible for per-language prompts)
-- Voice settings per language (alloy for EN, shimmer for ZH, nova for ES)
-- Fallback to English for unsupported languages
+- Language-specific prompt IDs with immersive learning instructions for ages 3-5
+- Voice settings per language (alloy for all languages currently)
+- Emphasis on simple vocabulary, repetition, and encouragement to practice
 
 ### Adding a New Language
 1. Create new JSON file in `client/locales/` (copy from en.json)
@@ -124,13 +127,25 @@ Each language file contains:
 - Chinese (zh) - Simplified Mandarin
 - Spanish (es)
 
+## Subscription Model
+
+The app includes a freemium subscription model:
+- **Free Trial**: 3-day trial with 15-minute daily listening limit
+- **Extended Trial**: 30 days free when subscribing (unlimited listening)
+- **Subscriptions**: $9.99/month or $99/year
+
+Developer tools are hidden behind a password (3268) - tap "StoryLingo v1.0.0" in Settings to access.
+
 ## Recent Changes
 
+- January 29, 2026: Rebranded from StoryTale to StoryLingo
+  - Focus shifted to immersive language learning for ages 3-5
+  - AI prompts updated to use simple vocabulary and encourage repetition
+  - Added "Vocabulary Practice - Coming Soon" feature placeholder
+  - Updated app name, subtitle, and messaging throughout
 - January 20, 2026: Refactored i18n system for scalability
   - Created LanguageContext with AsyncStorage persistence
   - Moved translations to JSON files (en.json, zh.json, es.json)
   - Added Spanish as third language
   - Server-side languageConfig for voice settings per language
 - January 19, 2026: Initial implementation with OpenAI Realtime API GA
-- Updated to use `/v1/realtime/client_secrets` and `/v1/realtime/calls` endpoints
-- Added WebRTC-based voice connection for web browsers
