@@ -1,6 +1,10 @@
 {
   "chooseYourStory": "Elige Tu Historia",
   "comingSoon": "Próximamente",
+  "vocabularyPractice": {
+    "title": "Práctica de Vocabulario",
+    "description": "Toca y practica palabras clave de cada historia"
+  },
   "stories": {
     "your-adventure": {
       "title": "Tu Aventura",
