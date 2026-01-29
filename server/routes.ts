@@ -19,6 +19,11 @@ INTERACTIVE STORYTELLING RULES:
 The macro beats are flexible guidelines, not strict plot points. Adapt them to whatever adventure the child chooses to create.`;
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint for deployment
+  app.get("/health", (req, res) => {
+    res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
   // GET /cover - Serve the cover image page
   app.get("/cover", (req, res) => {
     const templatePath = path.resolve(process.cwd(), "server", "templates", "cover-image.html");
