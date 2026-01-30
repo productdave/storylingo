@@ -122,6 +122,10 @@ export default function HomeScreen() {
             <ThemedText style={styles.buttonText}>Start</ThemedText>
           </LinearGradient>
         </AnimatedPressable>
+
+        <ThemedText style={styles.buildTimestamp}>
+          Build: Jan 30, 2026 @ 16:05
+        </ThemedText>
       </View>
     </LinearGradient>
   );
@@ -181,5 +185,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "700",
     color: "#FFFFFF",
+  },
+  buildTimestamp: {
+    fontSize: 12,
+    color: StoryBuddyColors.textSecondary,
+    marginTop: Spacing["3xl"],
+    opacity: 0.6,
   },
 });
