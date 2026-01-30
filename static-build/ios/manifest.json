@@ -1,11 +1,11 @@
 {
-  "id": "c46db26e-75d6-44e8-ad08-9d283524c5d6",
-  "createdAt": "2026-01-30T15:10:44.983Z",
+  "id": "2dd1e17d-5417-4ace-913b-582ea2410bfc",
+  "createdAt": "2026-01-30T15:47:49.508Z",
   "runtimeVersion": "exposdk:54.0.0",
   "launchAsset": {
-    "key": "bundle-1769785844983-1341",
+    "key": "bundle-1769788069508-592",
     "contentType": "application/javascript",
-    "url": "https://57498493-ef2c-4fb6-bb59-8312a7bfa7c3-00-2mtwvx1zx58p5.picard.replit.dev/1769785844983-1341/_expo/static/js/ios/bundle.js"
+    "url": "https://f04f449c-52ef-4279-83e6-9c17b18b371b-00-11i2cetrsc8vn.worf.replit.dev/1769788069508-592/_expo/static/js/ios/bundle.js"
   },
   "assets": [],
   "metadata": {},
@@ -33,9 +33,9 @@
           "foregroundImage": "./assets/images/android-icon-foreground.png",
           "backgroundImage": "./assets/images/android-icon-background.png",
           "monochromeImage": "./assets/images/android-icon-monochrome.png",
-          "foregroundImageUrl": "https://57498493-ef2c-4fb6-bb59-8312a7bfa7c3-00-2mtwvx1zx58p5.picard.replit.dev/assets/./assets/images/android-icon-foreground.png",
-          "monochromeImageUrl": "https://57498493-ef2c-4fb6-bb59-8312a7bfa7c3-00-2mtwvx1zx58p5.picard.replit.dev/assets/./assets/images/android-icon-monochrome.png",
-          "backgroundImageUrl": "https://57498493-ef2c-4fb6-bb59-8312a7bfa7c3-00-2mtwvx1zx58p5.picard.replit.dev/assets/./assets/images/android-icon-background.png"
+          "foregroundImageUrl": "https://f04f449c-52ef-4279-83e6-9c17b18b371b-00-11i2cetrsc8vn.worf.replit.dev/assets/./assets/images/android-icon-foreground.png",
+          "monochromeImageUrl": "https://f04f449c-52ef-4279-83e6-9c17b18b371b-00-11i2cetrsc8vn.worf.replit.dev/assets/./assets/images/android-icon-monochrome.png",
+          "backgroundImageUrl": "https://f04f449c-52ef-4279-83e6-9c17b18b371b-00-11i2cetrsc8vn.worf.replit.dev/assets/./assets/images/android-icon-background.png"
         },
         "edgeToEdgeEnabled": true,
         "predictiveBackGestureEnabled": false,
@@ -103,11 +103,11 @@
       "androidStatusBar": {
         "backgroundColor": "#F8F5FF"
       },
-      "iconUrl": "https://57498493-ef2c-4fb6-bb59-8312a7bfa7c3-00-2mtwvx1zx58p5.picard.replit.dev/assets/./assets/images/icon.png",
-      "hostUri": "57498493-ef2c-4fb6-bb59-8312a7bfa7c3-00-2mtwvx1zx58p5.picard.replit.dev/ios"
+      "iconUrl": "https://f04f449c-52ef-4279-83e6-9c17b18b371b-00-11i2cetrsc8vn.worf.replit.dev/assets/./assets/images/icon.png",
+      "hostUri": "f04f449c-52ef-4279-83e6-9c17b18b371b-00-11i2cetrsc8vn.worf.replit.dev/ios"
     },
     "expoGo": {
-      "debuggerHost": "57498493-ef2c-4fb6-bb59-8312a7bfa7c3-00-2mtwvx1zx58p5.picard.replit.dev/ios",
+      "debuggerHost": "f04f449c-52ef-4279-83e6-9c17b18b371b-00-11i2cetrsc8vn.worf.replit.dev/ios",
       "developer": {
         "tool": "expo-cli",
         "projectRoot": "/home/runner/workspace"
@@ -117,6 +117,6 @@
       },
       "mainModuleName": "client/index"
     },
-    "scopeKey": "@anonymous/story-buddy-284e2d09-733a-4860-9506-181d2ed849c9"
+    "scopeKey": "@anonymous/story-buddy-13f25258-eee3-46f5-8bfb-77a8e67b3312"
   }
 }
