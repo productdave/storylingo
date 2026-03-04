@@ -3,6 +3,7 @@ import type { Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import * as fs from "fs";
 import * as path from "path";
+import { createProxyMiddleware } from "http-proxy-middleware";
 
 const app = express();
 const log = console.log;
@@ -210,6 +211,10 @@ function configureExpoAndLanding(app: express.Application) {
       if (fs.existsSync(webIndexPath)) {
         return res.sendFile(webIndexPath);
       }
+      // In development, fall through to the Metro proxy
+      if (process.env.NODE_ENV === "development") {
+        return next();
+      }
       // Fallback to landing page if web build doesn't exist
       return serveLandingPage({
         req,
@@ -262,15 +267,19 @@ function setupErrorHandler(app: express.Application) {
 
   setupErrorHandler(app);
 
+  // In development, proxy all non-API requests to the Metro web dev server
+  if (process.env.NODE_ENV === "development") {
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (req.path.startsWith("/api")) return next();
+      createProxyMiddleware({
+        target: "http://localhost:8081",
+        changeOrigin: true,
+      })(req, res, next);
+    });
+  }
+
   const port = parseInt(process.env.PORT || "5000", 10);
-  server.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`express server serving on port ${port}`);
-    },
-  );
+  server.listen(port, "0.0.0.0", () => {
+    log(`express server serving on port ${port}`);
+  });
 })();

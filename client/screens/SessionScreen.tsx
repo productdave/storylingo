@@ -136,14 +136,8 @@ export default function SessionScreen() {
   const pulseScale = useSharedValue(1);
   const glowOpacity = useSharedValue(0);
 
-  // Auto-connect when screen mounts (triggered by story selection)
+  // Cleanup on unmount only (connection is started by user tap)
   useEffect(() => {
-    if (Platform.OS === "web") {
-      connectToRealtimeWeb();
-    } else {
-      connectToRealtimeNative();
-    }
-
     return () => {
       if (pcRef.current) {
         pcRef.current.close();
@@ -370,8 +364,23 @@ export default function SessionScreen() {
         }
       };
 
-      // Get local audio stream
-      const ms = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Get local audio stream — must be called within a user gesture
+      let ms: MediaStream;
+      try {
+        ms = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (micError: any) {
+        pc.close();
+        setStatus("idle");
+        const isDenied = micError?.name === "NotAllowedError" || micError?.name === "PermissionDeniedError";
+        Alert.alert(
+          "Microphone Required",
+          isDenied
+            ? "Microphone access was denied. Please allow microphone access in your browser settings, then tap the play button again."
+            : "Could not access your microphone. Please check that your device has a working microphone and try again.",
+          [{ text: "OK" }]
+        );
+        return;
+      }
       localStreamRef.current = ms;
       ms.getTracks().forEach((track) => pc.addTrack(track, ms));
 
@@ -452,15 +461,20 @@ export default function SessionScreen() {
   const handleTalkPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    // Talk button now acts as pause/resume toggle
-    if (isSessionActive) {
+    if (status === "idle" || status === "error") {
+      // Start connection on first tap (requires user gesture for microphone)
+      if (Platform.OS === "web") {
+        connectToRealtimeWeb();
+      } else {
+        connectToRealtimeNative();
+      }
+    } else if (isSessionActive) {
+      // Pause/resume toggle once connected
       if (isPaused) {
-        // Resume the story
         sendMessageToAI(t.voiceAgent.resumeMessage);
         setIsPaused(false);
         startPulseAnimation();
       } else {
-        // Pause the story
         sendMessageToAI(t.voiceAgent.pauseMessage);
         setIsPaused(true);
         stopPulseAnimation();
@@ -544,6 +558,8 @@ export default function SessionScreen() {
         return t.session.speaking;
       case "error":
         return t.session.connectionLost;
+      case "idle":
+        return "Tap to begin";
       default:
         return t.session.connecting;
     }
@@ -570,7 +586,9 @@ export default function SessionScreen() {
   };
   
   const getTalkButtonIcon = () => {
-    // Show pause/play icon based on state
+    if (status === "idle" || status === "error") {
+      return "play";
+    }
     if (isPaused && isSessionActive) {
       return "play";
     }
