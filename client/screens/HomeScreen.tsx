@@ -18,6 +18,7 @@ import * as Haptics from "expo-haptics";
 
 import { ThemedText } from "@/components/ThemedText";
 import { Spacing, BorderRadius, StoryBuddyColors } from "@/constants/theme";
+import { BUILD_DATE } from "@/constants/buildDate";
 import type { RootStackParamList } from "@/navigation/RootStackNavigator";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -124,7 +125,7 @@ export default function HomeScreen() {
         </AnimatedPressable>
 
         <ThemedText style={styles.buildTimestamp}>
-          Build: Jan 30, 2026 @ 16:05
+          Build: {BUILD_DATE}
         </ThemedText>
       </View>
     </LinearGradient>
