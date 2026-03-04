@@ -28,6 +28,13 @@ function setupCors(app: express.Application) {
       });
     }
 
+    // Generic allowed origins (comma-separated, e.g. for Railway/Render/etc.)
+    if (process.env.ALLOWED_ORIGINS) {
+      process.env.ALLOWED_ORIGINS.split(",").forEach((d) => {
+        origins.add(d.trim());
+      });
+    }
+
     const origin = req.header("origin");
 
     // Allow localhost origins for Expo web development (any port)
