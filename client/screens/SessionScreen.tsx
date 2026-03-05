@@ -41,7 +41,6 @@ type SessionStatus =
   | "speaking"
   | "error";
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 function TrialPromptModal({ visible, onStartTrial, onDismiss }: { 
   visible: boolean; 
@@ -687,46 +686,55 @@ export default function SessionScreen() {
         ) : null}
 
         <View style={styles.talkButtonContainer}>
-          {/* Button + pulse ring in a fixed-size wrapper so the ring centers correctly */}
-          <View style={styles.talkButtonWrapper}>
-            <Animated.View style={[styles.pulseRing, pulseStyle]} />
-            <AnimatedPressable
-              onPress={handleTalkPress}
-              onPressIn={handleTalkPressIn}
-              onPressOut={handleTalkPressOut}
-              style={[styles.talkButton, talkButtonStyle]}
-              testID="button-talk"
-            >
-              <LinearGradient
-                colors={getTalkButtonColor() as [string, string]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.talkButtonGradient}
-              >
-                <Feather
-                  name={getTalkButtonIcon() as any}
-                  size={64}
-                  color="#FFFFFF"
-                />
-              </LinearGradient>
-            </AnimatedPressable>
-          </View>
-          {/* Push-to-talk hint — only shown when it's the child's turn */}
-          {status === "listening" && !isPaused && (
-            <View style={styles.holdHintContainer}>
-              <Feather
-                name={isHolding ? "radio" : "mic"}
-                size={14}
-                color={isHolding ? "#FF3366" : StoryBuddyColors.textSecondary}
-              />
-              <ThemedText style={[
-                styles.holdHintText,
-                isHolding && styles.holdHintTextActive,
-              ]}>
-                {isHolding ? t.session.listening : t.session.holdToSpeak}
-              </ThemedText>
+          {/* Outer Pressable covers both the circle and the hint pill so the
+              entire visual region is one unified touch target — no accidental
+              text selection when a child long-presses the pill area */}
+          <Pressable
+            onPress={handleTalkPress}
+            onPressIn={handleTalkPressIn}
+            onPressOut={handleTalkPressOut}
+            style={styles.talkButtonOuter}
+            testID="button-talk"
+          >
+            {/* Button + pulse ring in a fixed-size wrapper so the ring centers correctly */}
+            <View style={styles.talkButtonWrapper}>
+              <Animated.View style={[styles.pulseRing, pulseStyle]} />
+              <Animated.View style={[styles.talkButton, talkButtonStyle]}>
+                <LinearGradient
+                  colors={getTalkButtonColor() as [string, string]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.talkButtonGradient}
+                >
+                  <Feather
+                    name={getTalkButtonIcon() as any}
+                    size={64}
+                    color="#FFFFFF"
+                  />
+                </LinearGradient>
+              </Animated.View>
             </View>
-          )}
+            {/* Push-to-talk hint — only shown when it's the child's turn.
+                selectable={false} prevents native text selection on long press */}
+            {status === "listening" && !isPaused && (
+              <View style={styles.holdHintContainer}>
+                <Feather
+                  name={isHolding ? "radio" : "mic"}
+                  size={14}
+                  color={isHolding ? "#FF3366" : StoryBuddyColors.textSecondary}
+                />
+                <ThemedText
+                  selectable={false}
+                  style={[
+                    styles.holdHintText,
+                    isHolding && styles.holdHintTextActive,
+                  ]}
+                >
+                  {isHolding ? t.session.listening : t.session.holdToSpeak}
+                </ThemedText>
+              </View>
+            )}
+          </Pressable>
         </View>
 
         <View style={styles.controlsContainer}>
@@ -882,6 +890,10 @@ const styles = StyleSheet.create({
   talkButtonContainer: {
     alignItems: "center",
     justifyContent: "center",
+  },
+  // Outer pressable — covers both the circle and hint pill as one touch target
+  talkButtonOuter: {
+    alignItems: "center",
   },
   // Fixed-size wrapper so the absolute pulse ring centers behind the button
   talkButtonWrapper: {
