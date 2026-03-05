@@ -113,7 +113,8 @@ export default function SessionScreen() {
 
   const [status, setStatus] = useState<SessionStatus>("idle");
   const [isSessionActive, setIsSessionActive] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isHolding, setIsHolding] = useState(false); // true while child holds the mic button
   const [isPaused, setIsPaused] = useState(false);
   const [displayRemainingSeconds, setDisplayRemainingSeconds] = useState(
     Math.max(0, dailyLimitSeconds - dailyListenTimeSeconds)
@@ -310,17 +311,57 @@ export default function SessionScreen() {
         };
         dc.send(JSON.stringify(responseEvent));
         console.log("Triggered AI response");
+
+        // Configure VAD to be less sensitive to background noise
+        // threshold 0.7 (default 0.5) = only trigger on clear intentional speech
+        // silence_duration_ms 800 = wait longer before treating silence as end of turn
+        dc.send(JSON.stringify({
+          type: "session.update",
+          session: {
+            turn_detection: {
+              type: "server_vad",
+              threshold: 0.85,
+              prefix_padding_ms: 300,
+              silence_duration_ms: 1000,
+            },
+          },
+        }));
+        console.log("VAD config applied");
       };
       dc.onmessage = (msgEvent) => {
         try {
           const data = JSON.parse(msgEvent.data);
           console.log("OpenAI event:", data.type);
           
-          // Update status based on server events
           if (data.type === "response.audio.delta" || data.type === "response.audio_transcript.delta") {
+            // AI is speaking — mute mic AND disable server VAD so nothing can interrupt
             setStatus("speaking");
-          } else if (data.type === "response.done" || data.type === "input_audio_buffer.speech_started") {
+            if (localStreamRef.current) {
+              localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = false; });
+            }
+            setIsMuted(true);
+            stopPulseAnimation();
+            // Turn off VAD entirely + clear audio buffer while AI is speaking
+            if (dataChannelRef.current?.readyState === "open") {
+              dataChannelRef.current.send(JSON.stringify({
+                type: "session.update",
+                session: { turn_detection: null },
+              }));
+              dataChannelRef.current.send(JSON.stringify({ type: "input_audio_buffer.clear" }));
+            }
+          } else if (data.type === "response.done") {
+            // AI finished — it's the child's turn, but keep mic MUTED
+            // Child must press & hold the button to speak (push-to-talk)
             setStatus("listening");
+            setIsMuted(true); // Stay muted — push-to-talk activates it
+            startPulseAnimation(); // Pulse ring signals "your turn!"
+            // Keep VAD off — only enabled when child holds the button
+            if (dataChannelRef.current?.readyState === "open") {
+              dataChannelRef.current.send(JSON.stringify({
+                type: "session.update",
+                session: { turn_detection: null },
+              }));
+            }
           } else if (data.type === "session.created") {
             console.log("Session created successfully");
           } else if (data.type === "error") {
@@ -382,7 +423,10 @@ export default function SessionScreen() {
         return;
       }
       localStreamRef.current = ms;
-      ms.getTracks().forEach((track) => pc.addTrack(track, ms));
+      ms.getTracks().forEach((track) => {
+        track.enabled = false; // Muted by default until AI finishes speaking
+        pc.addTrack(track, ms);
+      });
 
       // Create offer
       const offer = await pc.createOffer();
@@ -459,17 +503,70 @@ export default function SessionScreen() {
   };
 
   const handleTalkPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
+    // Only used to START the session (idle / error state)
     if (status === "idle" || status === "error") {
-      // Start connection on first tap (requires user gesture for microphone)
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       if (Platform.OS === "web") {
         connectToRealtimeWeb();
       } else {
         connectToRealtimeNative();
       }
-    } else if (isSessionActive) {
-      // Pause/resume toggle once connected
+    }
+    // All active-session mic control is handled by pressIn/pressOut (push-to-talk)
+  };
+
+  const handleTalkPressIn = () => {
+    talkButtonScale.value = withSpring(0.95, { damping: 15 });
+    // Push-to-talk: unmute mic while finger is held down (only during child's turn)
+    if (isSessionActive && status !== "speaking" && !isPaused) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      if (localStreamRef.current) {
+        localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = true; });
+      }
+      setIsMuted(false);
+      setIsHolding(true);
+      // Clear stale audio, then re-enable VAD so OpenAI can detect speech
+      if (dataChannelRef.current?.readyState === "open") {
+        dataChannelRef.current.send(JSON.stringify({ type: "input_audio_buffer.clear" }));
+        dataChannelRef.current.send(JSON.stringify({
+          type: "session.update",
+          session: {
+            turn_detection: {
+              type: "server_vad",
+              threshold: 0.85,
+              prefix_padding_ms: 300,
+              silence_duration_ms: 1000,
+            },
+          },
+        }));
+      }
+    }
+  };
+
+  const handleTalkPressOut = () => {
+    talkButtonScale.value = withSpring(1, { damping: 15 });
+    // Push-to-talk: mute mic when finger is released
+    if (isSessionActive && isHolding) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (localStreamRef.current) {
+        localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = false; });
+      }
+      setIsMuted(true);
+      setIsHolding(false);
+      // Commit audio buffer so OpenAI processes what was said, then disable VAD
+      if (dataChannelRef.current?.readyState === "open") {
+        dataChannelRef.current.send(JSON.stringify({ type: "input_audio_buffer.commit" }));
+        dataChannelRef.current.send(JSON.stringify({
+          type: "session.update",
+          session: { turn_detection: null },
+        }));
+      }
+    }
+  };
+
+  const handlePause = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (isSessionActive) {
       if (isPaused) {
         sendMessageToAI(t.voiceAgent.resumeMessage);
         setIsPaused(false);
@@ -479,25 +576,6 @@ export default function SessionScreen() {
         setIsPaused(true);
         stopPulseAnimation();
       }
-    }
-  };
-
-  const handleTalkPressIn = () => {
-    talkButtonScale.value = withSpring(0.95, { damping: 15 });
-  };
-
-  const handleTalkPressOut = () => {
-    talkButtonScale.value = withSpring(1, { damping: 15 });
-  };
-
-  const handleMute = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (localStreamRef.current) {
-      const audioTracks = localStreamRef.current.getAudioTracks();
-      audioTracks.forEach(track => {
-        track.enabled = isMuted; // Toggle: if muted, enable; if not muted, disable
-      });
-      setIsMuted(!isMuted);
     }
   };
 
@@ -540,22 +618,16 @@ export default function SessionScreen() {
   };
 
   const getStatusText = () => {
-    // Show paused status when paused
     if (isPaused && isSessionActive) {
       return t.session.paused;
     }
-    // Show muted status when muted
-    if (isMuted && isSessionActive) {
-      return t.session.muted;
-    }
-    
     switch (status) {
       case "connecting":
         return t.session.connecting;
-      case "listening":
-        return t.session.listening;
       case "speaking":
         return t.session.speaking;
+      case "listening":
+        return isHolding ? t.session.listening : t.session.holdToSpeak;
       case "error":
         return t.session.connectionLost;
       case "idle":
@@ -566,36 +638,21 @@ export default function SessionScreen() {
   };
 
   const getTalkButtonColor = () => {
-    // Show paused color when paused
-    if (isPaused && isSessionActive) {
-      return ["#888888", "#AAAAAA"];
-    }
-    
-    switch (status) {
-      case "listening":
-        return [StoryBuddyColors.primary, "#FF8FB3"];
-      case "speaking":
-        return [StoryBuddyColors.secondary, "#FFE066"];
-      case "connecting":
-        return ["#B0A0C0", "#C0B0D0"];
-      case "error":
-        return [StoryBuddyColors.error, "#FF8888"];
-      default:
-        return [StoryBuddyColors.primary, "#FF8FB3"];
-    }
+    if (isPaused && isSessionActive) return ["#888888", "#AAAAAA"];
+    if (status === "idle" || status === "error") return [StoryBuddyColors.primary, "#FF8FB3"];
+    if (status === "speaking") return [StoryBuddyColors.secondary, "#FFE066"]; // Gold: AI talking
+    if (isHolding) return ["#FF3366", "#FF6B9D"];  // Bright red-pink: actively recording
+    if (status === "listening") return ["#B0A0C0", "#C0B0D0"]; // Grey: waiting, hold to speak
+    if (status === "connecting") return ["#B0A0C0", "#C0B0D0"];
+    return ["#B0A0C0", "#C0B0D0"];
   };
-  
+
   const getTalkButtonIcon = () => {
-    if (status === "idle" || status === "error") {
-      return "play";
-    }
-    if (isPaused && isSessionActive) {
-      return "play";
-    }
-    if (status === "speaking") {
-      return "volume-2";
-    }
-    return "pause";
+    if (status === "idle" || status === "error") return "play";
+    if (isPaused && isSessionActive) return "play";
+    if (status === "speaking") return "volume-2"; // AI talking — gold button
+    if (isHolding) return "mic";                  // Child actively speaking — bright pink
+    return "mic-off";                             // Waiting — grey, hold to speak
   };
 
   return (
@@ -624,33 +681,52 @@ export default function SessionScreen() {
               color={isLowTime ? StoryBuddyColors.error : StoryBuddyColors.textSecondary} 
             />
             <Text style={[styles.countdownText, isLowTime ? styles.countdownTextWarning : null]}>
-              {formatTimeRemaining(displayRemainingSeconds)} left today
+              {t.session.timeLeft.replace("{time}", formatTimeRemaining(displayRemainingSeconds))}
             </Text>
           </View>
         ) : null}
 
         <View style={styles.talkButtonContainer}>
-          <Animated.View style={[styles.pulseRing, pulseStyle]} />
-          <AnimatedPressable
-            onPress={handleTalkPress}
-            onPressIn={handleTalkPressIn}
-            onPressOut={handleTalkPressOut}
-            style={[styles.talkButton, talkButtonStyle]}
-            testID="button-talk"
-          >
-            <LinearGradient
-              colors={getTalkButtonColor() as [string, string]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.talkButtonGradient}
+          {/* Button + pulse ring in a fixed-size wrapper so the ring centers correctly */}
+          <View style={styles.talkButtonWrapper}>
+            <Animated.View style={[styles.pulseRing, pulseStyle]} />
+            <AnimatedPressable
+              onPress={handleTalkPress}
+              onPressIn={handleTalkPressIn}
+              onPressOut={handleTalkPressOut}
+              style={[styles.talkButton, talkButtonStyle]}
+              testID="button-talk"
             >
+              <LinearGradient
+                colors={getTalkButtonColor() as [string, string]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.talkButtonGradient}
+              >
+                <Feather
+                  name={getTalkButtonIcon() as any}
+                  size={64}
+                  color="#FFFFFF"
+                />
+              </LinearGradient>
+            </AnimatedPressable>
+          </View>
+          {/* Push-to-talk hint — only shown when it's the child's turn */}
+          {status === "listening" && !isPaused && (
+            <View style={styles.holdHintContainer}>
               <Feather
-                name={getTalkButtonIcon() as any}
-                size={64}
-                color="#FFFFFF"
+                name={isHolding ? "radio" : "mic"}
+                size={14}
+                color={isHolding ? "#FF3366" : StoryBuddyColors.textSecondary}
               />
-            </LinearGradient>
-          </AnimatedPressable>
+              <ThemedText style={[
+                styles.holdHintText,
+                isHolding && styles.holdHintTextActive,
+              ]}>
+                {isHolding ? t.session.listening : t.session.holdToSpeak}
+              </ThemedText>
+            </View>
+          )}
         </View>
 
         <View style={styles.controlsContainer}>
@@ -668,20 +744,20 @@ export default function SessionScreen() {
           </Pressable>
 
           <Pressable
-            style={[styles.controlButton, isMuted ? styles.muteButtonActive : null]}
-            onPress={handleMute}
-            testID="button-mute"
+            style={[styles.controlButton, isPaused ? styles.pauseButtonActive : null]}
+            onPress={handlePause}
+            testID="button-pause"
             disabled={!isSessionActive}
           >
             <Feather
-              name={isMuted ? "mic-off" : "mic"}
+              name={isPaused ? "play" : "pause"}
               size={20}
-              color={isMuted ? StoryBuddyColors.error : StoryBuddyColors.textSecondary}
+              color={isPaused ? StoryBuddyColors.primary : StoryBuddyColors.textSecondary}
             />
             <ThemedText
-              style={[styles.controlButtonText, isMuted ? { color: StoryBuddyColors.error } : null]}
+              style={[styles.controlButtonText, isPaused ? { color: StoryBuddyColors.primary } : null]}
             >
-              {isMuted ? t.session.unmute : t.session.mute}
+              {isPaused ? t.session.resume : t.session.pause}
             </ThemedText>
           </Pressable>
         </View>
@@ -807,8 +883,39 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  // Fixed-size wrapper so the absolute pulse ring centers behind the button
+  talkButtonWrapper: {
+    width: 220,
+    height: 220,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  holdHintContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    backgroundColor: "rgba(255,255,255,0.6)",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(180,160,200,0.3)",
+  },
+  holdHintText: {
+    fontSize: 13,
+    color: StoryBuddyColors.textSecondary,
+    fontWeight: "500",
+  },
+  holdHintTextActive: {
+    color: "#FF3366",
+    fontWeight: "600",
+  },
   pulseRing: {
     position: "absolute",
+    // Centered within the 220×220 talkButtonWrapper: (220-200)/2 = 10
+    top: 10,
+    left: 10,
     width: 200,
     height: 200,
     borderRadius: 100,
@@ -847,8 +954,8 @@ const styles = StyleSheet.create({
     borderColor: StoryBuddyColors.border,
     backgroundColor: "rgba(255, 255, 255, 0.8)",
   },
-  muteButtonActive: {
-    borderColor: StoryBuddyColors.error,
+  pauseButtonActive: {
+    borderColor: StoryBuddyColors.primary,
     backgroundColor: "rgba(255, 107, 157, 0.1)",
   },
   controlButtonText: {

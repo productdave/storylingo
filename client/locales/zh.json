@@ -86,7 +86,11 @@
     "connectionLost": "连接丢失",
     "back": "返回",
     "mute": "静音",
-    "unmute": "取消静音"
+    "unmute": "取消静音",
+    "pause": "暂停",
+    "resume": "继续",
+    "holdToSpeak": "按住说话",
+    "timeLeft": "今日剩余 {time}"
   },
   "voiceAgent": {
     "languageInstruction": "请在整个故事会话中使用中文（普通话）。",
