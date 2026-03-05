@@ -86,7 +86,11 @@
     "connectionLost": "Connection lost",
     "back": "Back",
     "mute": "Mute",
-    "unmute": "Unmute"
+    "unmute": "Unmute",
+    "pause": "Pause",
+    "resume": "Resume",
+    "holdToSpeak": "Hold to speak",
+    "timeLeft": "{time} left today"
   },
   "voiceAgent": {
     "languageInstruction": "Please speak in English for the entire story session.",

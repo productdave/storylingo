@@ -206,14 +206,14 @@ function configureExpoAndLanding(app: express.Application) {
     }
 
     if (req.path === "/") {
-      // Serve web app directly to browsers
+      // In development, skip static build and fall through to the Metro proxy
+      if (process.env.NODE_ENV === "development") {
+        return next();
+      }
+      // Serve web app directly to browsers (production)
       const webIndexPath = path.join(webDistPath, "index.html");
       if (fs.existsSync(webIndexPath)) {
         return res.sendFile(webIndexPath);
-      }
-      // In development, fall through to the Metro proxy
-      if (process.env.NODE_ENV === "development") {
-        return next();
       }
       // Fallback to landing page if web build doesn't exist
       return serveLandingPage({
@@ -227,10 +227,12 @@ function configureExpoAndLanding(app: express.Application) {
     next();
   });
 
-  // Serve web build assets
-  app.use(express.static(webDistPath));
+  // Serve web build assets (skip in development — Metro serves everything)
+  if (process.env.NODE_ENV !== "development") {
+    app.use(express.static(webDistPath));
+    app.use(express.static(path.resolve(process.cwd(), "static-build")));
+  }
   app.use("/assets", express.static(path.resolve(process.cwd(), "assets")));
-  app.use(express.static(path.resolve(process.cwd(), "static-build")));
 
   log("Expo routing: Checking expo-platform header on / and /manifest");
 }

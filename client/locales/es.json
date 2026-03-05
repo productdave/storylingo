@@ -86,7 +86,11 @@
     "connectionLost": "Conexión perdida",
     "back": "Volver",
     "mute": "Silenciar",
-    "unmute": "Activar sonido"
+    "unmute": "Activar sonido",
+    "pause": "Pausar",
+    "resume": "Continuar",
+    "holdToSpeak": "Mantén presionado para hablar",
+    "timeLeft": "{time} restantes hoy"
   },
   "voiceAgent": {
     "languageInstruction": "Por favor, habla en español durante toda la sesión de la historia.",
