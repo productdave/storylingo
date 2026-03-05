@@ -331,7 +331,7 @@ export default function SessionScreen() {
         try {
           const data = JSON.parse(msgEvent.data);
           console.log("OpenAI event:", data.type);
-          
+
           if (data.type === "response.audio.delta" || data.type === "response.audio_transcript.delta") {
             // AI is speaking — mute mic AND disable server VAD so nothing can interrupt
             setStatus("speaking");
@@ -510,6 +510,7 @@ export default function SessionScreen() {
       } else {
         connectToRealtimeNative();
       }
+      setIsMuted(newMuted);
     }
     // All active-session mic control is handled by pressIn/pressOut (push-to-talk)
   };
