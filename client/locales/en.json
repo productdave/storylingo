@@ -77,6 +77,14 @@
       "description": "A princess cursed to sleep for 100 years"
     }
   },
+  "portal": {
+    "your-adventure": "Opening the portal to your world...",
+    "snow-white": "Entering the Enchanted Forest...",
+    "rapunzel": "Climbing the Magical Tower...",
+    "peter-pan": "Flying to Neverland...",
+    "little-mermaid": "Diving into the Ocean Kingdom...",
+    "sleeping-beauty": "Entering the Sleeping Castle..."
+  },
   "session": {
     "connecting": "Connecting...",
     "listening": "Listening...",
