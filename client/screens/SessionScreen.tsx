@@ -715,7 +715,11 @@ export default function SessionScreen() {
   const isConnectingOrIdle = status === "idle" || status === "connecting" || status === "error";
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      // @ts-ignore: web-only prop to block long-press context menu on mobile Safari
+      onContextMenu={(e: any) => e.preventDefault()}
+    >
       <ImageBackground
         source={story.image}
         style={styles.backgroundImage}
@@ -1001,6 +1005,10 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     height: "100%",
+    // @ts-ignore: web-only properties to prevent long-press context menu on mobile browsers
+    WebkitTouchCallout: "none",
+    WebkitUserSelect: "none",
+    userSelect: "none",
   },
   overlay: {
     flex: 1,
