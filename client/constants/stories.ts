@@ -6,6 +6,7 @@ export interface Story {
   image: any;
   macroBeats: string[];
   isInteractive?: boolean;
+  portalText?: string;
 }
 
 export interface ComingSoonStory {

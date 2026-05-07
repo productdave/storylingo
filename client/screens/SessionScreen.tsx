@@ -8,6 +8,8 @@ import {
   Linking,
   Modal,
   Text,
+  Image,
+  ImageBackground,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
@@ -33,6 +35,7 @@ import type { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { getApiUrl } from "@/lib/query-client";
 import { useLanguage, getStoryTranslation } from "@/context/LanguageContext";
 import { useSubscription } from "@/context/SubscriptionContext";
+import { useProgress, ConversationMessage } from "@/context/ProgressContext";
 
 type SessionStatus =
   | "idle"
@@ -127,10 +130,16 @@ export default function SessionScreen() {
   const isFreeTrial = subscriptionStatus === 'free_trial';
   const isLowTime = displayRemainingSeconds < 180; // Less than 3 minutes
 
+  const { addSession, markStoryCompleted, saveTranscript } = useProgress();
+
   const pcRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const dataChannelRef = useRef<any>(null);
+
+  const transcriptRef = useRef<ConversationMessage[]>([]);
+  const currentAITextRef = useRef<string>('');
+  const userTurnCountRef = useRef(0);
 
   const talkButtonScale = useSharedValue(1);
   const pulseScale = useSharedValue(1);
@@ -323,24 +332,45 @@ export default function SessionScreen() {
               prefix_padding_ms: 300,
               silence_duration_ms: 1000,
             },
+            input_audio_transcription: {
+              model: "gpt-4o-mini-transcribe",
+            },
           },
         }));
-        console.log("VAD config applied");
+        console.log("VAD config + transcription applied");
+
+        transcriptRef.current = [];
+        currentAITextRef.current = '';
+        userTurnCountRef.current = 0;
+        addSession(story.id);
       };
       dc.onmessage = (msgEvent) => {
         try {
           const data = JSON.parse(msgEvent.data);
           console.log("OpenAI event:", data.type);
 
-          if (data.type === "response.audio.delta" || data.type === "response.audio_transcript.delta") {
-            // AI is speaking — mute mic AND disable server VAD so nothing can interrupt
+          if (data.type === "response.audio_transcript.delta") {
+            currentAITextRef.current += data.delta || '';
             setStatus("speaking");
             if (localStreamRef.current) {
               localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = false; });
             }
             setIsMuted(true);
             stopPulseAnimation();
-            // Turn off VAD entirely + clear audio buffer while AI is speaking
+            if (dataChannelRef.current?.readyState === "open") {
+              dataChannelRef.current.send(JSON.stringify({
+                type: "session.update",
+                session: { turn_detection: null },
+              }));
+              dataChannelRef.current.send(JSON.stringify({ type: "input_audio_buffer.clear" }));
+            }
+          } else if (data.type === "response.audio.delta") {
+            setStatus("speaking");
+            if (localStreamRef.current) {
+              localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = false; });
+            }
+            setIsMuted(true);
+            stopPulseAnimation();
             if (dataChannelRef.current?.readyState === "open") {
               dataChannelRef.current.send(JSON.stringify({
                 type: "session.update",
@@ -349,17 +379,35 @@ export default function SessionScreen() {
               dataChannelRef.current.send(JSON.stringify({ type: "input_audio_buffer.clear" }));
             }
           } else if (data.type === "response.done") {
-            // AI finished — it's the child's turn, but keep mic MUTED
-            // Child must press & hold the button to speak (push-to-talk)
+            if (currentAITextRef.current.trim()) {
+              transcriptRef.current.push({
+                role: 'ai',
+                text: currentAITextRef.current.trim(),
+                timestamp: Date.now(),
+              });
+              currentAITextRef.current = '';
+            }
             setStatus("listening");
-            setIsMuted(true); // Stay muted — push-to-talk activates it
-            startPulseAnimation(); // Pulse ring signals "your turn!"
-            // Keep VAD off — only enabled when child holds the button
+            setIsMuted(true);
+            startPulseAnimation();
             if (dataChannelRef.current?.readyState === "open") {
               dataChannelRef.current.send(JSON.stringify({
                 type: "session.update",
                 session: { turn_detection: null },
               }));
+            }
+          } else if (data.type === "conversation.item.input_audio_transcription.completed") {
+            const transcript = data.transcript?.trim();
+            if (transcript) {
+              transcriptRef.current.push({
+                role: 'user',
+                text: transcript,
+                timestamp: Date.now(),
+              });
+              userTurnCountRef.current += 1;
+              if (userTurnCountRef.current >= 8) {
+                markStoryCompleted(story.id);
+              }
             }
           } else if (data.type === "session.created") {
             console.log("Session created successfully");
@@ -510,7 +558,6 @@ export default function SessionScreen() {
       } else {
         connectToRealtimeNative();
       }
-      setIsMuted(newMuted);
     }
     // All active-session mic control is handled by pressIn/pressOut (push-to-talk)
   };
@@ -605,10 +652,18 @@ export default function SessionScreen() {
     stopPulseAnimation();
   };
 
-  const handleBack = () => {
+  const handleBack = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (transcriptRef.current.length > 0) {
+      await saveTranscript(story.id, transcriptRef.current);
+    }
+    const transcript = [...transcriptRef.current];
     stopSession();
-    navigation.replace("StorySelection");
+    if (transcript.length > 0) {
+      navigation.replace("ConversationReview", { story, transcript });
+    } else {
+      navigation.replace("StorySelection");
+    }
   };
 
   const formatTimeRemaining = (seconds: number) => {
@@ -655,123 +710,211 @@ export default function SessionScreen() {
     return "mic-off";                             // Waiting — grey, hold to speak
   };
 
+  const portalText = (t as any).portal?.[story.id] || t.session.connecting;
+
+  const isConnectingOrIdle = status === "idle" || status === "connecting" || status === "error";
+
   return (
-    <LinearGradient
-      colors={["#E8DEFF", "#F8F5FF", "#FFE8F0"]}
-      start={{ x: 0.5, y: 0 }}
-      end={{ x: 0.5, y: 1 }}
-      style={styles.container}
-    >
-      <View
-        style={[
-          styles.content,
-          {
-            paddingTop: headerHeight + Spacing["4xl"],
-            paddingBottom: insets.bottom + Spacing["4xl"],
-          },
-        ]}
+    <View style={styles.container}>
+      <ImageBackground
+        source={story.image}
+        style={styles.backgroundImage}
+        resizeMode="cover"
       >
-        <ThemedText style={styles.statusText}>{getStatusText()}</ThemedText>
-
-        {isFreeTrial ? (
-          <View style={[styles.countdownBadge, isLowTime ? styles.countdownBadgeWarning : null]}>
-            <Feather 
-              name="clock" 
-              size={14} 
-              color={isLowTime ? StoryBuddyColors.error : StoryBuddyColors.textSecondary} 
-            />
-            <Text style={[styles.countdownText, isLowTime ? styles.countdownTextWarning : null]}>
-              {t.session.timeLeft.replace("{time}", formatTimeRemaining(displayRemainingSeconds))}
-            </Text>
-          </View>
-        ) : null}
-
-        <View style={styles.talkButtonContainer}>
-          {/* Outer Pressable covers both the circle and the hint pill so the
-              entire visual region is one unified touch target — no accidental
-              text selection when a child long-presses the pill area */}
-          <Pressable
-            onPress={handleTalkPress}
-            onPressIn={handleTalkPressIn}
-            onPressOut={handleTalkPressOut}
-            style={styles.talkButtonOuter}
-            testID="button-talk"
+        <LinearGradient
+          colors={
+            isConnectingOrIdle
+              ? ["rgba(45, 27, 78, 0.75)", "rgba(45, 27, 78, 0.92)"]
+              : ["rgba(45, 27, 78, 0.55)", "rgba(45, 27, 78, 0.85)"]
+          }
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={styles.overlay}
+        >
+          <View
+            style={[
+              styles.content,
+              {
+                paddingTop: headerHeight + Spacing["3xl"],
+                paddingBottom: insets.bottom + Spacing["3xl"],
+              },
+            ]}
           >
-            {/* Button + pulse ring in a fixed-size wrapper so the ring centers correctly */}
-            <View style={styles.talkButtonWrapper}>
-              <Animated.View style={[styles.pulseRing, pulseStyle]} />
-              <Animated.View style={[styles.talkButton, talkButtonStyle]}>
-                <LinearGradient
-                  colors={getTalkButtonColor() as [string, string]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.talkButtonGradient}
-                >
-                  <Feather
-                    name={getTalkButtonIcon() as any}
-                    size={64}
-                    color="#FFFFFF"
-                  />
-                </LinearGradient>
-              </Animated.View>
-            </View>
-            {/* Push-to-talk hint — only shown when it's the child's turn.
-                selectable={false} prevents native text selection on long press */}
-            {status === "listening" && !isPaused && (
-              <View style={styles.holdHintContainer}>
-                <Feather
-                  name={isHolding ? "radio" : "mic"}
-                  size={14}
-                  color={isHolding ? "#FF3366" : StoryBuddyColors.textSecondary}
-                />
-                <ThemedText
-                  selectable={false}
-                  style={[
-                    styles.holdHintText,
-                    isHolding && styles.holdHintTextActive,
-                  ]}
-                >
-                  {isHolding ? t.session.listening : t.session.holdToSpeak}
-                </ThemedText>
-              </View>
+            {isConnectingOrIdle ? (
+              /* ---- PORTAL / CONNECTING STATE ---- */
+              <>
+                <View style={styles.portalTopSpacer} />
+
+                <View style={styles.portalCenter}>
+                  <View style={styles.portalImageRing}>
+                    <View style={styles.portalImageInner}>
+                      <Image
+                        source={story.image}
+                        style={styles.portalCharacterImage}
+                        resizeMode="cover"
+                      />
+                    </View>
+                  </View>
+
+                  <ThemedText style={styles.portalText}>
+                    {status === "connecting" ? portalText : story.title}
+                  </ThemedText>
+
+                  {status === "error" && (
+                    <ThemedText style={styles.portalSubtext}>
+                      {t.session.connectionLost}
+                    </ThemedText>
+                  )}
+                </View>
+
+                <View style={styles.portalBottom}>
+                  {status === "idle" || status === "error" ? (
+                    <Pressable
+                      onPress={handleTalkPress}
+                      onPressIn={handleTalkPressIn}
+                      onPressOut={handleTalkPressOut}
+                      style={styles.portalStartButton}
+                      testID="button-talk"
+                    >
+                      <LinearGradient
+                        colors={[StoryBuddyColors.primary, "#FF8FB3"]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.portalStartGradient}
+                      >
+                        <Feather name="play" size={32} color="#FFFFFF" />
+                        <Text style={styles.portalStartText}>
+                          {status === "error" ? "Retry" : "Start Story"}
+                        </Text>
+                      </LinearGradient>
+                    </Pressable>
+                  ) : (
+                    <View style={styles.connectingDots}>
+                      <Animated.View style={[styles.dot, { opacity: glowOpacity }]} />
+                      <Animated.View style={[styles.dot, styles.dotDelay]} />
+                      <Animated.View style={[styles.dot, styles.dotDelay2]} />
+                    </View>
+                  )}
+
+                  <Pressable
+                    style={styles.portalBackButton}
+                    onPress={handleBack}
+                    testID="button-back"
+                  >
+                    <Feather name="arrow-left" size={18} color="rgba(255,255,255,0.7)" />
+                    <Text style={styles.portalBackText}>{t.session.back}</Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              /* ---- ACTIVE SESSION STATE ---- */
+              <>
+                <View style={styles.sessionTopRow}>
+                  <View style={styles.sessionCharacterBadge}>
+                    <Image
+                      source={story.image}
+                      style={styles.sessionCharacterThumb}
+                      resizeMode="cover"
+                    />
+                    <ThemedText style={styles.sessionStoryTitle}>{story.title}</ThemedText>
+                  </View>
+
+                  {isFreeTrial ? (
+                    <View style={[styles.countdownBadge, isLowTime ? styles.countdownBadgeWarning : null]}>
+                      <Feather
+                        name="clock"
+                        size={14}
+                        color={isLowTime ? StoryBuddyColors.error : "rgba(255,255,255,0.7)"}
+                      />
+                      <Text style={[styles.countdownText, isLowTime ? styles.countdownTextWarning : null]}>
+                        {t.session.timeLeft.replace("{time}", formatTimeRemaining(displayRemainingSeconds))}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+
+                <ThemedText style={styles.statusText}>{getStatusText()}</ThemedText>
+
+                <View style={styles.talkButtonContainer}>
+                  <Pressable
+                    onPress={handleTalkPress}
+                    onPressIn={handleTalkPressIn}
+                    onPressOut={handleTalkPressOut}
+                    style={styles.talkButtonOuter}
+                    testID="button-talk"
+                  >
+                    <View style={styles.talkButtonWrapper}>
+                      <Animated.View style={[styles.pulseRing, pulseStyle]} />
+                      <Animated.View style={[styles.talkButton, talkButtonStyle]}>
+                        <LinearGradient
+                          colors={getTalkButtonColor() as [string, string]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.talkButtonGradient}
+                        >
+                          <Feather
+                            name={getTalkButtonIcon() as any}
+                            size={64}
+                            color="#FFFFFF"
+                          />
+                        </LinearGradient>
+                      </Animated.View>
+                    </View>
+                    {status === "listening" && !isPaused && (
+                      <View style={styles.holdHintContainer}>
+                        <Feather
+                          name={isHolding ? "radio" : "mic"}
+                          size={14}
+                          color={isHolding ? "#FF3366" : "rgba(255,255,255,0.7)"}
+                        />
+                        <ThemedText
+                          selectable={false}
+                          style={[
+                            styles.holdHintText,
+                            isHolding && styles.holdHintTextActive,
+                          ]}
+                        >
+                          {isHolding ? t.session.listening : t.session.holdToSpeak}
+                        </ThemedText>
+                      </View>
+                    )}
+                  </Pressable>
+                </View>
+
+                <View style={styles.controlsContainer}>
+                  <Pressable
+                    style={styles.controlButton}
+                    onPress={handleBack}
+                    testID="button-back"
+                  >
+                    <Feather name="arrow-left" size={20} color="rgba(255,255,255,0.7)" />
+                    <ThemedText style={styles.controlButtonText}>{t.session.back}</ThemedText>
+                  </Pressable>
+
+                  <Pressable
+                    style={[styles.controlButton, isPaused ? styles.pauseButtonActive : null]}
+                    onPress={handlePause}
+                    testID="button-pause"
+                    disabled={!isSessionActive}
+                  >
+                    <Feather
+                      name={isPaused ? "play" : "pause"}
+                      size={20}
+                      color={isPaused ? StoryBuddyColors.primary : "rgba(255,255,255,0.7)"}
+                    />
+                    <ThemedText
+                      style={[styles.controlButtonText, isPaused ? { color: StoryBuddyColors.primary } : null]}
+                    >
+                      {isPaused ? t.session.resume : t.session.pause}
+                    </ThemedText>
+                  </Pressable>
+                </View>
+              </>
             )}
-          </Pressable>
-        </View>
-
-        <View style={styles.controlsContainer}>
-          <Pressable
-            style={styles.controlButton}
-            onPress={handleBack}
-            testID="button-back"
-          >
-            <Feather
-              name="arrow-left"
-              size={20}
-              color={StoryBuddyColors.textSecondary}
-            />
-            <ThemedText style={styles.controlButtonText}>{t.session.back}</ThemedText>
-          </Pressable>
-
-          <Pressable
-            style={[styles.controlButton, isPaused ? styles.pauseButtonActive : null]}
-            onPress={handlePause}
-            testID="button-pause"
-            disabled={!isSessionActive}
-          >
-            <Feather
-              name={isPaused ? "play" : "pause"}
-              size={20}
-              color={isPaused ? StoryBuddyColors.primary : StoryBuddyColors.textSecondary}
-            />
-            <ThemedText
-              style={[styles.controlButtonText, isPaused ? { color: StoryBuddyColors.primary } : null]}
-            >
-              {isPaused ? t.session.resume : t.session.pause}
-            </ThemedText>
-          </Pressable>
-        </View>
-      </View>
-    </LinearGradient>
+          </View>
+        </LinearGradient>
+      </ImageBackground>
+    </View>
   );
 }
 
@@ -852,6 +995,15 @@ const modalStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#2D1B4E",
+  },
+  backgroundImage: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+  },
+  overlay: {
+    flex: 1,
   },
   content: {
     flex: 1,
@@ -859,31 +1011,154 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: Spacing["2xl"],
   },
+
+  // ---- PORTAL / CONNECTING STATE ----
+  portalTopSpacer: {
+    height: 40,
+  },
+  portalCenter: {
+    alignItems: "center",
+    gap: Spacing.xl,
+  },
+  portalImageRing: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    borderWidth: 4,
+    borderColor: "rgba(255, 107, 157, 0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 107, 157, 0.15)",
+  },
+  portalImageInner: {
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    overflow: "hidden",
+  },
+  portalCharacterImage: {
+    width: "100%",
+    height: "100%",
+  },
+  portalText: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.3)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  portalSubtext: {
+    fontSize: 14,
+    color: "rgba(255,255,255,0.6)",
+    textAlign: "center",
+  },
+  portalBottom: {
+    alignItems: "center",
+    gap: Spacing.xl,
+  },
+  portalStartButton: {
+    borderRadius: BorderRadius["2xl"],
+    overflow: "hidden",
+    shadowColor: StoryBuddyColors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  portalStartGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.md,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing["3xl"],
+  },
+  portalStartText: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  connectingDots: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  dot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: StoryBuddyColors.primary,
+  },
+  dotDelay: {
+    opacity: 0.6,
+  },
+  dotDelay2: {
+    opacity: 0.3,
+  },
+  portalBackButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+  },
+  portalBackText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.7)",
+  },
+
+  // ---- ACTIVE SESSION STATE ----
+  sessionTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  sessionCharacterBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    paddingRight: Spacing.lg,
+    borderRadius: BorderRadius.full,
+  },
+  sessionCharacterThumb: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  sessionStoryTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
   statusText: {
     fontSize: 16,
-    color: StoryBuddyColors.textSecondary,
+    color: "rgba(255,255,255,0.8)",
     textAlign: "center",
   },
   countdownBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
     paddingVertical: 8,
     paddingHorizontal: Spacing.lg,
     borderRadius: BorderRadius.full,
     gap: 8,
-    marginTop: Spacing.md,
     borderWidth: 1,
-    borderColor: StoryBuddyColors.border,
+    borderColor: "rgba(255,255,255,0.2)",
   },
   countdownBadgeWarning: {
-    backgroundColor: "rgba(255, 107, 107, 0.15)",
-    borderColor: StoryBuddyColors.error,
+    backgroundColor: "rgba(255, 107, 107, 0.25)",
+    borderColor: "rgba(255, 107, 107, 0.5)",
   },
   countdownText: {
     fontSize: 14,
     fontWeight: "600",
-    color: StoryBuddyColors.textSecondary,
+    color: "rgba(255,255,255,0.8)",
   },
   countdownTextWarning: {
     color: StoryBuddyColors.error,
@@ -892,11 +1167,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  // Outer pressable — covers both the circle and hint pill as one touch target
   talkButtonOuter: {
     alignItems: "center",
   },
-  // Fixed-size wrapper so the absolute pulse ring centers behind the button
   talkButtonWrapper: {
     width: 220,
     height: 220,
@@ -910,14 +1183,14 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingHorizontal: 14,
     paddingVertical: 7,
-    backgroundColor: "rgba(255,255,255,0.6)",
+    backgroundColor: "rgba(255,255,255,0.15)",
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(180,160,200,0.3)",
+    borderColor: "rgba(255,255,255,0.2)",
   },
   holdHintText: {
     fontSize: 13,
-    color: StoryBuddyColors.textSecondary,
+    color: "rgba(255,255,255,0.7)",
     fontWeight: "500",
   },
   holdHintTextActive: {
@@ -926,7 +1199,6 @@ const styles = StyleSheet.create({
   },
   pulseRing: {
     position: "absolute",
-    // Centered within the 220×220 talkButtonWrapper: (220-200)/2 = 10
     top: 10,
     left: 10,
     width: 200,
@@ -964,16 +1236,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     borderRadius: BorderRadius.lg,
     borderWidth: 2,
-    borderColor: StoryBuddyColors.border,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
   },
   pauseButtonActive: {
     borderColor: StoryBuddyColors.primary,
-    backgroundColor: "rgba(255, 107, 157, 0.1)",
+    backgroundColor: "rgba(255, 107, 157, 0.2)",
   },
   controlButtonText: {
     fontSize: 14,
     fontWeight: "600",
-    color: StoryBuddyColors.textSecondary,
+    color: "rgba(255,255,255,0.7)",
   },
 });

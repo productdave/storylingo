@@ -77,6 +77,14 @@
       "description": "Una princesa maldecida a dormir por 100 años"
     }
   },
+  "portal": {
+    "your-adventure": "Abriendo el portal a tu mundo...",
+    "snow-white": "Entrando al Bosque Encantado...",
+    "rapunzel": "Subiendo a la Torre Mágica...",
+    "peter-pan": "Volando a Nunca Jamás...",
+    "little-mermaid": "Sumergiéndose en el Reino del Océano...",
+    "sleeping-beauty": "Entrando al Castillo Dormido..."
+  },
   "session": {
     "connecting": "Conectando...",
     "listening": "Escuchando...",

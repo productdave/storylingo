@@ -19,6 +19,7 @@ import RootStackNavigator from "@/navigation/RootStackNavigator";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { SubscriptionProvider } from "@/context/SubscriptionContext";
+import { ProgressProvider } from "@/context/ProgressContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -43,6 +44,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <LanguageProvider>
           <SubscriptionProvider>
+            <ProgressProvider>
             <SafeAreaProvider>
               <GestureHandlerRootView style={styles.root}>
                 <KeyboardProvider>
@@ -53,6 +55,7 @@ export default function App() {
                 </KeyboardProvider>
               </GestureHandlerRootView>
             </SafeAreaProvider>
+            </ProgressProvider>
           </SubscriptionProvider>
         </LanguageProvider>
       </QueryClientProvider>

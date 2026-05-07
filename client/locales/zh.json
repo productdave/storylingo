@@ -77,6 +77,14 @@
       "description": "一位被诅咒沉睡一百年的公主"
     }
   },
+  "portal": {
+    "your-adventure": "正在打开通往你的世界的传送门...",
+    "snow-white": "正在进入魔法森林...",
+    "rapunzel": "正在攀登魔法塔...",
+    "peter-pan": "正在飞往梦幻岛...",
+    "little-mermaid": "正在潜入海底王国...",
+    "sleeping-beauty": "正在进入沉睡城堡..."
+  },
   "session": {
     "connecting": "连接中...",
     "listening": "聆听中...",
