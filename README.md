@@ -1,12 +1,24 @@
+<div align="center">
+
+<img src="attached_assets/storylingo-cover.png" width="100%" alt="A child learning languages with StoryLingo's owl story companion" />
+
 # StoryLingo
+
+**Turn language practice into a story children can talk to.**
+
+</div>
 
 A voice-first language learning app for kids (ages 3-10) that uses fairy tales and AI storytelling. Kids have real-time voice conversations with story characters using OpenAI's Realtime API.
 
-## Deployed App
+## The product bet
 
-**Live:** [https://storylingo-production.up.railway.app](https://storylingo-production.up.railway.app)
+Young learners get more speaking practice when the conversation feels like play. StoryLingo puts the learner inside familiar stories, where an AI character can listen, respond in real time, and gently keep the adventure moving in the language they are practising.
 
-[Railway project dashboard](https://railway.com/project/f25e6e37-bb04-4dbc-8742-753a1759a087)
+## Product status
+
+This repository is a **working prototype**. The former public Railway demo is currently offline, so the source and local setup below are the reliable ways to explore it.
+
+For a more guided deployment walkthrough, see the separate [StoryLingo teaching repository](https://github.com/deewang/storylingo-demo).
 
 ## Prerequisites
 
