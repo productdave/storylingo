@@ -45,9 +45,9 @@ StoryLingo uses OpenAI's Realtime API (GA version) to create immersive, voice-ba
 1. **Home Screen**: Welcome page with animated mascot and Start button
 2. **Story Selection**: Story cards with watercolor illustrations + language toggle
 3. **Session Screen**: 
-   - Large Talk button (tap to pause/resume)
+   - Large Talk button (hold to speak)
    - Status indicator (Connecting/Listening/Speaking)
-   - Back and Mute controls
+   - Back, Pause/Resume, and Mute controls
 4. **Vocabulary Practice (Coming Soon)**: AI-generated keywords from stories that kids can tap and practice
 
 ## API Endpoints
@@ -60,6 +60,7 @@ StoryLingo uses OpenAI's Realtime API (GA version) to create immersive, voice-ba
 ## Environment Variables
 
 - `OPENAI_API_KEY` - Required for OpenAI Realtime API access
+- `EXPO_PUBLIC_DOMAIN` - API host used by the web client (for example, `localhost:5000` during local development)
 
 ## Running the App
 
@@ -80,7 +81,7 @@ Key configuration:
 - Model: `gpt-realtime`
 - Voice: `alloy`
 - Turn detection: Server VAD with 500ms silence threshold
-- Input transcription: `gpt-audio`
+- Input transcription: `gpt-4o-mini-transcribe`
 
 ## Design
 

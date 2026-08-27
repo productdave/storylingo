@@ -21,9 +21,11 @@ npm test
 
 Use `npm run test:e2e:headed` when a visible browser helps diagnose a failure. Playwright starts the Expo web server automatically on port 4173.
 
+GitHub Actions runs the Chromium suite for every pull request and every push to `main`. If a CI run fails, it keeps the Playwright HTML report, traces, screenshots, and videos as the `playwright-report` artifact for seven days.
+
 ## Test layers
 
-- Browser tests live in `e2e/` and cover responsive layouts, navigation, and critical user interactions.
+- Browser tests live in `e2e/`. Current coverage verifies the full-width mobile layout, the contained desktop shell, story-card containment, navigation to story selection, and live switching across the 768px breakpoint.
 - Integration tests should cover flows spanning screens or browser/runtime boundaries.
 - Unit tests should be added for extracted pure logic when browser coverage would be unnecessarily slow or indirect.
 - Smoke tests belong in the browser suite when their purpose is to prove the app loads and a critical path remains reachable.

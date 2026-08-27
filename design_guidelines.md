@@ -1,4 +1,4 @@
-# Story Buddy - Design Guidelines
+# StoryLingo - Design Guidelines
 
 ## 1. Brand Identity
 
@@ -25,7 +25,7 @@
 - Header: None (full-screen welcome)
 - Content: Vertically centered
   - Large app icon/mascot illustration (friendly character)
-  - "Story Buddy" title in playful display font
+  - "StoryLingo" title in playful display font
   - Single large "Start" button
 - Safe area insets: top: insets.top + 60, bottom: insets.bottom + 60
 
