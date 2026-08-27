@@ -3,6 +3,7 @@
 When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
 
 Key routing rules:
+
 - Product ideas/brainstorming → invoke /office-hours
 - Strategy/scope → invoke /plan-ceo-review
 - Architecture → invoke /plan-eng-review
@@ -16,3 +17,11 @@ Key routing rules:
 - Save progress → invoke /context-save
 - Resume context → invoke /context-restore
 - Author a backlog-ready spec/issue → invoke /spec
+
+## Testing
+
+- Run the browser suite with `npm test` or `npm run test:e2e`.
+- Browser tests live in `e2e/` and use Playwright with Chromium.
+- See `TESTING.md` for setup, layers, and conventions.
+- When adding a function, conditional, error path, or bug fix, add tests for the relevant success and failure paths.
+- Never commit code that makes existing tests fail.

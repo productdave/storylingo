@@ -49,12 +49,14 @@ export default function App() {
             <ProgressProvider>
               <SafeAreaProvider>
                 <View
+                  testID="app-viewport"
                   style={[
                     styles.viewport,
                     useDesktopShell && styles.desktopViewport,
                   ]}
                 >
                   <GestureHandlerRootView
+                    testID="app-shell"
                     style={[
                       styles.root,
                       useDesktopShell && styles.desktopShell,
