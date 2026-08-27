@@ -50,7 +50,7 @@ Try the hosted app at [storylingo-production.up.railway.app](https://storylingo-
 Clone the repository and install its dependencies:
 
 ```bash
-git clone https://github.com/deewang/storylingo.git
+git clone https://github.com/productdave/storylingo.git
 cd storylingo
 npm install
 ```
