@@ -25,7 +25,7 @@ The experience uses short, expressive exchanges designed to give young learners 
 - **Child-friendly push-to-talk controls** with pause and resume
 - **Conversation review** showing both sides of the exchange after a session
 - **Locally saved preferences and progress** with no account required
-- **Responsive, animated interface** designed around large, simple controls
+- **Mobile-first, animated interface** that stays full-width on phones and uses a contained, phone-width shell on desktop
 
 ## How to use
 
@@ -35,6 +35,8 @@ The experience uses short, expressive exchanges designed to give young learners 
 4. Select **Start Story** and allow microphone access.
 5. Hold the microphone button while speaking, then release it for the storyteller to respond.
 6. Pause when needed or leave the story to review the conversation.
+
+Try the hosted app at [storylingo-production.up.railway.app](https://storylingo-production.up.railway.app/), or follow the local setup below.
 
 ## Run locally
 
@@ -69,6 +71,8 @@ EXPO_PUBLIC_DOMAIN=localhost:5000 npx expo start --web
 
 Open [http://localhost:8081](http://localhost:8081).
 
+Run the Playwright browser suite with `npm test`. See [TESTING.md](TESTING.md) for browser setup, current coverage, and test conventions.
+
 ## Tech stack
 
 | Layer | Technology |
@@ -78,10 +82,13 @@ Open [http://localhost:8081](http://localhost:8081).
 | Voice | OpenAI Realtime API, WebRTC, `gpt-realtime`, `gpt-4o-mini-transcribe` |
 | Backend | Express 5, TypeScript |
 | Local data | AsyncStorage |
+| Testing | Playwright Test with Chromium, GitHub Actions |
 | Build and deployment | Expo export, esbuild, Railway configuration |
+
+For more detail, see the [design guidelines](design_guidelines.md) and [implementation notes](replit.md).
 
 ## Status and limitations
 
-StoryLingo is a working, browser-first product prototype. The former hosted demo is offline, so local setup is currently the reliable way to try it.
+StoryLingo is a working, browser-first product prototype. The hosted app runs on Railway, and the repository can also be run locally.
 
-Voice conversation is not implemented for native Expo builds. The subscription and paywall screens demonstrate the intended product flow but are not connected to live billing or purchase restoration. User state remains on the local device, and the repository does not currently include an automated test suite.
+Voice conversation is not implemented for native Expo builds. The subscription and paywall screens demonstrate the intended product flow but are not connected to live billing or purchase restoration. User state remains on the local device. The automated Playwright suite currently covers the responsive app shell, story-card containment, navigation to story selection, and breakpoint switching.
