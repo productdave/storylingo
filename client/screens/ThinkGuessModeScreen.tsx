@@ -225,6 +225,7 @@ const styles = StyleSheet.create({
   disabledText: { color: "#867995" },
   startPill: {
     alignSelf: "center",
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
