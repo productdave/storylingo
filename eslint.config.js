@@ -7,6 +7,19 @@ module.exports = defineConfig([
   expoConfig,
   eslintPluginPrettierRecommended,
   {
-    ignores: ["dist/*"],
+    ignores: [
+      "dist/**",
+      "static-build/**",
+      "server_dist/**",
+      "playwright-report/**",
+      "test-results/**",
+      "attached_assets/**",
+      ".local/**",
+      ".claude/**",
+    ],
+    // Formatting is checked separately; lint should report code-quality issues.
+    rules: {
+      "prettier/prettier": "off",
+    },
   },
 ]);

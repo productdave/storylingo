@@ -5,8 +5,6 @@ import {
   Pressable,
   Alert,
   Platform,
-  Linking,
-  Modal,
   Text,
   Image,
   ImageBackground,
@@ -17,84 +15,20 @@ import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withRepeat,
-  withSequence,
-  withTiming,
-  cancelAnimation,
-  Easing,
-} from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 
+import {
+  HoldToSpeakControl,
+  type HoldToSpeakState,
+} from "@/components/HoldToSpeakControl";
 import { ThemedText } from "@/components/ThemedText";
-import { Spacing, BorderRadius, StoryBuddyColors, Typography } from "@/constants/theme";
+import { Spacing, BorderRadius, StoryBuddyColors } from "@/constants/theme";
 import type { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { getApiUrl } from "@/lib/query-client";
 import { useLanguage, getStoryTranslation } from "@/context/LanguageContext";
-import { useSubscription } from "@/context/SubscriptionContext";
 import { useProgress, ConversationMessage } from "@/context/ProgressContext";
 
-type SessionStatus =
-  | "idle"
-  | "connecting"
-  | "listening"
-  | "speaking"
-  | "error";
-
-
-function TrialPromptModal({ visible, onStartTrial, onDismiss }: { 
-  visible: boolean; 
-  onStartTrial: () => void; 
-  onDismiss: () => void;
-}) {
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onDismiss}
-    >
-      <View style={modalStyles.overlay}>
-        <View style={modalStyles.content}>
-          <View style={modalStyles.iconContainer}>
-            <Feather name="gift" size={40} color={StoryBuddyColors.primary} />
-          </View>
-          
-          <Text style={modalStyles.title}>Enjoying the Story?</Text>
-          <Text style={modalStyles.subtitle}>
-            Get 30 days free when you subscribe!
-          </Text>
-          
-          <View style={modalStyles.features}>
-            <View style={modalStyles.featureRow}>
-              <Feather name="check" size={16} color={StoryBuddyColors.success} />
-              <Text style={modalStyles.featureText}>Unlimited stories</Text>
-            </View>
-            <View style={modalStyles.featureRow}>
-              <Feather name="check" size={16} color={StoryBuddyColors.success} />
-              <Text style={modalStyles.featureText}>All story collections</Text>
-            </View>
-            <View style={modalStyles.featureRow}>
-              <Feather name="check" size={16} color={StoryBuddyColors.success} />
-              <Text style={modalStyles.featureText}>Cancel anytime</Text>
-            </View>
-          </View>
-          
-          <Pressable style={modalStyles.button} onPress={onStartTrial}>
-            <Text style={modalStyles.buttonText}>Start 30-Day Free Trial</Text>
-          </Pressable>
-          
-          <Pressable style={modalStyles.dismissButton} onPress={onDismiss}>
-            <Text style={modalStyles.dismissText}>Maybe Later</Text>
-          </Pressable>
-        </View>
-      </View>
-    </Modal>
-  );
-}
+type SessionStatus = "idle" | "connecting" | "listening" | "speaking" | "error";
 
 export default function SessionScreen() {
   const insets = useSafeAreaInsets();
@@ -104,31 +38,11 @@ export default function SessionScreen() {
   const route = useRoute<RouteProp<RootStackParamList, "Session">>();
   const { story } = route.params;
   const { language, t } = useLanguage();
-  const { 
-    hasActiveSubscription, 
-    addListenTime,
-    dailyLimitReached,
-    dailyLimitSeconds,
-    dailyListenTimeSeconds,
-    status: subscriptionStatus,
-  } = useSubscription();
 
   const [status, setStatus] = useState<SessionStatus>("idle");
   const [isSessionActive, setIsSessionActive] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
   const [isHolding, setIsHolding] = useState(false); // true while child holds the mic button
   const [isPaused, setIsPaused] = useState(false);
-  const [displayRemainingSeconds, setDisplayRemainingSeconds] = useState(
-    Math.max(0, dailyLimitSeconds - dailyListenTimeSeconds)
-  );
-
-  const listenTimeRef = useRef(0);
-  const listenIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const dailyLimitCheckedRef = useRef(false);
-  
-  // Daily limit only applies to free trial (before signing up for any plan)
-  const isFreeTrial = subscriptionStatus === 'free_trial';
-  const isLowTime = displayRemainingSeconds < 180; // Less than 3 minutes
 
   const { addSession, markStoryCompleted, saveTranscript } = useProgress();
 
@@ -138,12 +52,8 @@ export default function SessionScreen() {
   const dataChannelRef = useRef<any>(null);
 
   const transcriptRef = useRef<ConversationMessage[]>([]);
-  const currentAITextRef = useRef<string>('');
+  const currentAITextRef = useRef<string>("");
   const userTurnCountRef = useRef(0);
-
-  const talkButtonScale = useSharedValue(1);
-  const pulseScale = useSharedValue(1);
-  const glowOpacity = useSharedValue(0);
 
   // Cleanup on unmount only (connection is started by user tap)
   useEffect(() => {
@@ -151,94 +61,8 @@ export default function SessionScreen() {
       if (pcRef.current) {
         pcRef.current.close();
       }
-      if (listenIntervalRef.current) {
-        clearInterval(listenIntervalRef.current);
-      }
     };
   }, []);
-
-  // Track listen time when connecting or session is active
-  useEffect(() => {
-    const isTracking = (status === 'connecting' || isSessionActive) && !isPaused;
-    
-    if (isTracking) {
-      listenIntervalRef.current = setInterval(() => {
-        listenTimeRef.current += 1;
-        
-        // Update display countdown for trial users
-        if (isFreeTrial) {
-          const totalToday = dailyListenTimeSeconds + listenTimeRef.current;
-          const remaining = Math.max(0, dailyLimitSeconds - totalToday);
-          setDisplayRemainingSeconds(remaining);
-        }
-        
-        // Save listen time every 10 seconds
-        if (listenTimeRef.current % 10 === 0) {
-          addListenTime(10);
-        }
-        
-        // Check if daily limit reached (only for trial users)
-        if (isFreeTrial && !dailyLimitCheckedRef.current) {
-          const totalToday = dailyListenTimeSeconds + listenTimeRef.current;
-          if (totalToday >= dailyLimitSeconds) {
-            dailyLimitCheckedRef.current = true;
-            // Stop the session and show paywall
-            if (listenIntervalRef.current) {
-              clearInterval(listenIntervalRef.current);
-            }
-            stopSession();
-            navigation.navigate('Paywall', { fromDailyLimit: true });
-          }
-        }
-      }, 1000);
-    } else {
-      if (listenIntervalRef.current) {
-        clearInterval(listenIntervalRef.current);
-        listenIntervalRef.current = null;
-      }
-    }
-
-    return () => {
-      if (listenIntervalRef.current) {
-        clearInterval(listenIntervalRef.current);
-      }
-    };
-  }, [status, isSessionActive, isPaused, isFreeTrial, dailyListenTimeSeconds, dailyLimitSeconds]);
-
-  const startPulseAnimation = useCallback(() => {
-    pulseScale.value = withRepeat(
-      withSequence(
-        withTiming(1.15, { duration: 800, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) })
-      ),
-      -1,
-      true
-    );
-    glowOpacity.value = withRepeat(
-      withSequence(
-        withTiming(0.6, { duration: 800 }),
-        withTiming(0.2, { duration: 800 })
-      ),
-      -1,
-      true
-    );
-  }, []);
-
-  const stopPulseAnimation = useCallback(() => {
-    cancelAnimation(pulseScale);
-    cancelAnimation(glowOpacity);
-    pulseScale.value = withSpring(1);
-    glowOpacity.value = withTiming(0);
-  }, []);
-
-  const talkButtonStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: talkButtonScale.value }],
-  }));
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseScale.value }],
-    opacity: glowOpacity.value,
-  }));
 
   const connectToRealtimeWeb = useCallback(async () => {
     try {
@@ -287,7 +111,7 @@ export default function SessionScreen() {
       dataChannelRef.current = dc;
       dc.onopen = () => {
         console.log("Data channel opened");
-        
+
         // Automatically initiate the story by sending a message to the AI
         // This tells the AI which story was selected, language preference, and to greet the child
         const storyTranslation = getStoryTranslation(t, story.id);
@@ -295,7 +119,7 @@ export default function SessionScreen() {
         const initiationMessage = t.voiceAgent.initiationMessage
           .replace(/{storyTitle}/g, storyTranslation.title)
           .replace(/{languageInstruction}/g, languageInstruction);
-        
+
         // Send a conversation item with the story initiation
         const createItemEvent = {
           type: "conversation.item.create",
@@ -312,7 +136,7 @@ export default function SessionScreen() {
         };
         dc.send(JSON.stringify(createItemEvent));
         console.log("Sent story initiation:", initiationMessage);
-        
+
         // Trigger the AI to respond
         const responseEvent = {
           type: "response.create",
@@ -323,24 +147,26 @@ export default function SessionScreen() {
         // Configure VAD to be less sensitive to background noise
         // threshold 0.7 (default 0.5) = only trigger on clear intentional speech
         // silence_duration_ms 800 = wait longer before treating silence as end of turn
-        dc.send(JSON.stringify({
-          type: "session.update",
-          session: {
-            turn_detection: {
-              type: "server_vad",
-              threshold: 0.85,
-              prefix_padding_ms: 300,
-              silence_duration_ms: 1000,
+        dc.send(
+          JSON.stringify({
+            type: "session.update",
+            session: {
+              turn_detection: {
+                type: "server_vad",
+                threshold: 0.85,
+                prefix_padding_ms: 300,
+                silence_duration_ms: 1000,
+              },
+              input_audio_transcription: {
+                model: "gpt-4o-mini-transcribe",
+              },
             },
-            input_audio_transcription: {
-              model: "gpt-4o-mini-transcribe",
-            },
-          },
-        }));
+          }),
+        );
         console.log("VAD config + transcription applied");
 
         transcriptRef.current = [];
-        currentAITextRef.current = '';
+        currentAITextRef.current = "";
         userTurnCountRef.current = 0;
         addSession(story.id);
       };
@@ -350,57 +176,68 @@ export default function SessionScreen() {
           console.log("OpenAI event:", data.type);
 
           if (data.type === "response.audio_transcript.delta") {
-            currentAITextRef.current += data.delta || '';
+            currentAITextRef.current += data.delta || "";
             setStatus("speaking");
             if (localStreamRef.current) {
-              localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = false; });
+              localStreamRef.current.getAudioTracks().forEach((t) => {
+                t.enabled = false;
+              });
             }
-            setIsMuted(true);
-            stopPulseAnimation();
             if (dataChannelRef.current?.readyState === "open") {
-              dataChannelRef.current.send(JSON.stringify({
-                type: "session.update",
-                session: { turn_detection: null },
-              }));
-              dataChannelRef.current.send(JSON.stringify({ type: "input_audio_buffer.clear" }));
+              dataChannelRef.current.send(
+                JSON.stringify({
+                  type: "session.update",
+                  session: { turn_detection: null },
+                }),
+              );
+              dataChannelRef.current.send(
+                JSON.stringify({ type: "input_audio_buffer.clear" }),
+              );
             }
           } else if (data.type === "response.audio.delta") {
             setStatus("speaking");
             if (localStreamRef.current) {
-              localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = false; });
+              localStreamRef.current.getAudioTracks().forEach((t) => {
+                t.enabled = false;
+              });
             }
-            setIsMuted(true);
-            stopPulseAnimation();
             if (dataChannelRef.current?.readyState === "open") {
-              dataChannelRef.current.send(JSON.stringify({
-                type: "session.update",
-                session: { turn_detection: null },
-              }));
-              dataChannelRef.current.send(JSON.stringify({ type: "input_audio_buffer.clear" }));
+              dataChannelRef.current.send(
+                JSON.stringify({
+                  type: "session.update",
+                  session: { turn_detection: null },
+                }),
+              );
+              dataChannelRef.current.send(
+                JSON.stringify({ type: "input_audio_buffer.clear" }),
+              );
             }
           } else if (data.type === "response.done") {
             if (currentAITextRef.current.trim()) {
               transcriptRef.current.push({
-                role: 'ai',
+                role: "ai",
                 text: currentAITextRef.current.trim(),
                 timestamp: Date.now(),
               });
-              currentAITextRef.current = '';
+              currentAITextRef.current = "";
             }
             setStatus("listening");
-            setIsMuted(true);
-            startPulseAnimation();
             if (dataChannelRef.current?.readyState === "open") {
-              dataChannelRef.current.send(JSON.stringify({
-                type: "session.update",
-                session: { turn_detection: null },
-              }));
+              dataChannelRef.current.send(
+                JSON.stringify({
+                  type: "session.update",
+                  session: { turn_detection: null },
+                }),
+              );
             }
-          } else if (data.type === "conversation.item.input_audio_transcription.completed") {
+          } else if (
+            data.type ===
+            "conversation.item.input_audio_transcription.completed"
+          ) {
             const transcript = data.transcript?.trim();
             if (transcript) {
               transcriptRef.current.push({
-                role: 'user',
+                role: "user",
                 text: transcript,
                 timestamp: Date.now(),
               });
@@ -414,7 +251,7 @@ export default function SessionScreen() {
           } else if (data.type === "error") {
             console.error("OpenAI error:", data.error);
           }
-        } catch (e) {
+        } catch {
           // Non-JSON message, ignore
         }
       };
@@ -425,7 +262,6 @@ export default function SessionScreen() {
         console.log("Data channel closed");
         setIsSessionActive(false);
         setStatus("error");
-        stopPulseAnimation();
       };
 
       // Monitor connection state
@@ -434,21 +270,24 @@ export default function SessionScreen() {
         if (pc.connectionState === "connected") {
           setStatus("listening");
           setIsSessionActive(true);
-          startPulseAnimation();
-        } else if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
+        } else if (
+          pc.connectionState === "disconnected" ||
+          pc.connectionState === "failed"
+        ) {
           setIsSessionActive(false);
           setStatus("error");
-          stopPulseAnimation();
         }
       };
 
       // Monitor ICE connection state
       pc.oniceconnectionstatechange = () => {
         console.log("ICE state:", pc.iceConnectionState);
-        if (pc.iceConnectionState === "disconnected" || pc.iceConnectionState === "failed") {
+        if (
+          pc.iceConnectionState === "disconnected" ||
+          pc.iceConnectionState === "failed"
+        ) {
           setIsSessionActive(false);
           setStatus("error");
-          stopPulseAnimation();
         }
       };
 
@@ -459,13 +298,15 @@ export default function SessionScreen() {
       } catch (micError: any) {
         pc.close();
         setStatus("idle");
-        const isDenied = micError?.name === "NotAllowedError" || micError?.name === "PermissionDeniedError";
+        const isDenied =
+          micError?.name === "NotAllowedError" ||
+          micError?.name === "PermissionDeniedError";
         Alert.alert(
           "Microphone Required",
           isDenied
             ? "Microphone access was denied. Please allow microphone access in your browser settings, then tap the play button again."
             : "Could not access your microphone. Please check that your device has a working microphone and try again.",
-          [{ text: "OK" }]
+          [{ text: "OK" }],
         );
         return;
       }
@@ -481,14 +322,17 @@ export default function SessionScreen() {
 
       // Step 3: Exchange SDP with OpenAI Realtime API
       // Using the correct GA endpoint: /v1/realtime/calls
-      const sdpResponse = await fetch("https://api.openai.com/v1/realtime/calls", {
-        method: "POST",
-        body: offer.sdp,
-        headers: {
-          Authorization: `Bearer ${client_secret}`,
-          "Content-Type": "application/sdp",
+      const sdpResponse = await fetch(
+        "https://api.openai.com/v1/realtime/calls",
+        {
+          method: "POST",
+          body: offer.sdp,
+          headers: {
+            Authorization: `Bearer ${client_secret}`,
+            "Content-Type": "application/sdp",
+          },
         },
-      });
+      );
 
       if (!sdpResponse.ok) {
         const errorText = await sdpResponse.text();
@@ -501,16 +345,15 @@ export default function SessionScreen() {
 
       // Connection handshake complete - status will update via onconnectionstatechange
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
     } catch (error) {
       console.error("Connection error:", error);
       setStatus("error");
       Alert.alert(
         "Connection Error",
-        "Could not connect to StoryLingo. Please try again."
+        "Could not connect to StoryLingo. Please try again.",
       );
     }
-  }, [story, startPulseAnimation, stopPulseAnimation]);
+  }, [addSession, language, markStoryCompleted, story, t]);
 
   const connectToRealtimeNative = useCallback(async () => {
     // For native mobile, show a message that this feature works best on web
@@ -518,7 +361,7 @@ export default function SessionScreen() {
     Alert.alert(
       "Voice Chat",
       "For the best voice experience, please use StoryLingo in a web browser. Scan the QR code and choose 'Open in browser' instead of Expo Go.",
-      [{ text: "OK", onPress: () => setStatus("idle") }]
+      [{ text: "OK", onPress: () => setStatus("idle") }],
     );
     setStatus("idle");
   }, []);
@@ -541,7 +384,7 @@ export default function SessionScreen() {
       };
       dc.send(JSON.stringify(createItemEvent));
       console.log("Sent message to AI:", message);
-      
+
       const responseEvent = {
         type: "response.create",
       };
@@ -563,50 +406,56 @@ export default function SessionScreen() {
   };
 
   const handleTalkPressIn = () => {
-    talkButtonScale.value = withSpring(0.95, { damping: 15 });
     // Push-to-talk: unmute mic while finger is held down (only during child's turn)
     if (isSessionActive && status !== "speaking" && !isPaused) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       if (localStreamRef.current) {
-        localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = true; });
+        localStreamRef.current.getAudioTracks().forEach((t) => {
+          t.enabled = true;
+        });
       }
-      setIsMuted(false);
       setIsHolding(true);
       // Clear stale audio, then re-enable VAD so OpenAI can detect speech
       if (dataChannelRef.current?.readyState === "open") {
-        dataChannelRef.current.send(JSON.stringify({ type: "input_audio_buffer.clear" }));
-        dataChannelRef.current.send(JSON.stringify({
-          type: "session.update",
-          session: {
-            turn_detection: {
-              type: "server_vad",
-              threshold: 0.85,
-              prefix_padding_ms: 300,
-              silence_duration_ms: 1000,
+        dataChannelRef.current.send(
+          JSON.stringify({ type: "input_audio_buffer.clear" }),
+        );
+        dataChannelRef.current.send(
+          JSON.stringify({
+            type: "session.update",
+            session: {
+              turn_detection: {
+                type: "server_vad",
+                threshold: 0.85,
+                prefix_padding_ms: 300,
+                silence_duration_ms: 1000,
+              },
             },
-          },
-        }));
+          }),
+        );
       }
     }
   };
 
   const handleTalkPressOut = () => {
-    talkButtonScale.value = withSpring(1, { damping: 15 });
     // Push-to-talk: mute mic when finger is released
     if (isSessionActive && isHolding) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       if (localStreamRef.current) {
-        localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = false; });
+        localStreamRef.current.getAudioTracks().forEach((t) => {
+          t.enabled = false;
+        });
       }
-      setIsMuted(true);
       setIsHolding(false);
       // Commit audio buffer so OpenAI processes what was said, then disable VAD
       if (dataChannelRef.current?.readyState === "open") {
-        dataChannelRef.current.send(JSON.stringify({ type: "input_audio_buffer.commit" }));
-        dataChannelRef.current.send(JSON.stringify({
-          type: "session.update",
-          session: { turn_detection: null },
-        }));
+        dataChannelRef.current.send(
+          JSON.stringify({ type: "input_audio_buffer.commit" }),
+        );
+        dataChannelRef.current.send(
+          JSON.stringify({
+            type: "session.update",
+            session: { turn_detection: null },
+          }),
+        );
       }
     }
   };
@@ -617,11 +466,9 @@ export default function SessionScreen() {
       if (isPaused) {
         sendMessageToAI(t.voiceAgent.resumeMessage);
         setIsPaused(false);
-        startPulseAnimation();
       } else {
         sendMessageToAI(t.voiceAgent.pauseMessage);
         setIsPaused(true);
-        stopPulseAnimation();
       }
     }
   };
@@ -634,7 +481,7 @@ export default function SessionScreen() {
     }
     // Stop local audio stream
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current.getTracks().forEach((track) => track.stop());
       localStreamRef.current = null;
     }
     // Stop audio playback
@@ -646,10 +493,8 @@ export default function SessionScreen() {
     // Reset state
     setIsSessionActive(false);
     setStatus("idle");
-    setIsMuted(false);
     setIsPaused(false);
     dataChannelRef.current = null;
-    stopPulseAnimation();
   };
 
   const handleBack = async () => {
@@ -664,12 +509,6 @@ export default function SessionScreen() {
     } else {
       navigation.replace("StorySelection");
     }
-  };
-
-  const formatTimeRemaining = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const getStatusText = () => {
@@ -692,27 +531,23 @@ export default function SessionScreen() {
     }
   };
 
-  const getTalkButtonColor = () => {
-    if (isPaused && isSessionActive) return ["#888888", "#AAAAAA"];
-    if (status === "idle" || status === "error") return [StoryBuddyColors.primary, "#FF8FB3"];
-    if (status === "speaking") return [StoryBuddyColors.secondary, "#FFE066"]; // Gold: AI talking
-    if (isHolding) return ["#FF3366", "#FF6B9D"];  // Bright red-pink: actively recording
-    if (status === "listening") return ["#B0A0C0", "#C0B0D0"]; // Grey: waiting, hold to speak
-    if (status === "connecting") return ["#B0A0C0", "#C0B0D0"];
-    return ["#B0A0C0", "#C0B0D0"];
-  };
-
-  const getTalkButtonIcon = () => {
-    if (status === "idle" || status === "error") return "play";
-    if (isPaused && isSessionActive) return "play";
-    if (status === "speaking") return "volume-2"; // AI talking — gold button
-    if (isHolding) return "mic";                  // Child actively speaking — bright pink
-    return "mic-off";                             // Waiting — grey, hold to speak
-  };
-
   const portalText = (t as any).portal?.[story.id] || t.session.connecting;
 
-  const isConnectingOrIdle = status === "idle" || status === "connecting" || status === "error";
+  const isConnectingOrIdle =
+    status === "idle" || status === "connecting" || status === "error";
+  const holdToSpeakState: HoldToSpeakState = isPaused
+    ? "paused"
+    : status === "speaking"
+      ? "speaking"
+      : isHolding
+        ? "recording"
+        : status === "listening"
+          ? "ready"
+          : status === "connecting"
+            ? "connecting"
+            : status === "error"
+              ? "error"
+              : "start";
 
   return (
     <View
@@ -794,9 +629,9 @@ export default function SessionScreen() {
                     </Pressable>
                   ) : (
                     <View style={styles.connectingDots}>
-                      <Animated.View style={[styles.dot, { opacity: glowOpacity }]} />
-                      <Animated.View style={[styles.dot, styles.dotDelay]} />
-                      <Animated.View style={[styles.dot, styles.dotDelay2]} />
+                      <View style={styles.dot} />
+                      <View style={[styles.dot, styles.dotDelay]} />
+                      <View style={[styles.dot, styles.dotDelay2]} />
                     </View>
                   )}
 
@@ -805,7 +640,11 @@ export default function SessionScreen() {
                     onPress={handleBack}
                     testID="button-back"
                   >
-                    <Feather name="arrow-left" size={18} color="rgba(255,255,255,0.7)" />
+                    <Feather
+                      name="arrow-left"
+                      size={18}
+                      color="rgba(255,255,255,0.7)"
+                    />
                     <Text style={styles.portalBackText}>{t.session.back}</Text>
                   </Pressable>
                 </View>
@@ -820,69 +659,34 @@ export default function SessionScreen() {
                       style={styles.sessionCharacterThumb}
                       resizeMode="cover"
                     />
-                    <ThemedText style={styles.sessionStoryTitle}>{story.title}</ThemedText>
+                    <ThemedText style={styles.sessionStoryTitle}>
+                      {story.title}
+                    </ThemedText>
                   </View>
-
-                  {isFreeTrial ? (
-                    <View style={[styles.countdownBadge, isLowTime ? styles.countdownBadgeWarning : null]}>
-                      <Feather
-                        name="clock"
-                        size={14}
-                        color={isLowTime ? StoryBuddyColors.error : "rgba(255,255,255,0.7)"}
-                      />
-                      <Text style={[styles.countdownText, isLowTime ? styles.countdownTextWarning : null]}>
-                        {t.session.timeLeft.replace("{time}", formatTimeRemaining(displayRemainingSeconds))}
-                      </Text>
-                    </View>
-                  ) : null}
                 </View>
 
-                <ThemedText style={styles.statusText}>{getStatusText()}</ThemedText>
+                <ThemedText style={styles.statusText}>
+                  {getStatusText()}
+                </ThemedText>
 
                 <View style={styles.talkButtonContainer}>
-                  <Pressable
-                    onPress={handleTalkPress}
-                    onPressIn={handleTalkPressIn}
-                    onPressOut={handleTalkPressOut}
-                    style={styles.talkButtonOuter}
+                  <HoldToSpeakControl
+                    labels={{
+                      start: "Tap to begin",
+                      connecting: t.session.connecting,
+                      hold: t.session.holdToSpeak,
+                      listening: t.session.listening,
+                      processing: t.session.connecting,
+                      speaking: t.session.speaking,
+                      paused: t.session.paused,
+                      error: t.session.connectionLost,
+                    }}
+                    onHoldEnd={handleTalkPressOut}
+                    onHoldStart={handleTalkPressIn}
+                    onStart={handleTalkPress}
+                    state={holdToSpeakState}
                     testID="button-talk"
-                  >
-                    <View style={styles.talkButtonWrapper}>
-                      <Animated.View style={[styles.pulseRing, pulseStyle]} />
-                      <Animated.View style={[styles.talkButton, talkButtonStyle]}>
-                        <LinearGradient
-                          colors={getTalkButtonColor() as [string, string]}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={styles.talkButtonGradient}
-                        >
-                          <Feather
-                            name={getTalkButtonIcon() as any}
-                            size={64}
-                            color="#FFFFFF"
-                          />
-                        </LinearGradient>
-                      </Animated.View>
-                    </View>
-                    {status === "listening" && !isPaused && (
-                      <View style={styles.holdHintContainer}>
-                        <Feather
-                          name={isHolding ? "radio" : "mic"}
-                          size={14}
-                          color={isHolding ? "#FF3366" : "rgba(255,255,255,0.7)"}
-                        />
-                        <ThemedText
-                          selectable={false}
-                          style={[
-                            styles.holdHintText,
-                            isHolding && styles.holdHintTextActive,
-                          ]}
-                        >
-                          {isHolding ? t.session.listening : t.session.holdToSpeak}
-                        </ThemedText>
-                      </View>
-                    )}
-                  </Pressable>
+                  />
                 </View>
 
                 <View style={styles.controlsContainer}>
@@ -891,12 +695,21 @@ export default function SessionScreen() {
                     onPress={handleBack}
                     testID="button-back"
                   >
-                    <Feather name="arrow-left" size={20} color="rgba(255,255,255,0.7)" />
-                    <ThemedText style={styles.controlButtonText}>{t.session.back}</ThemedText>
+                    <Feather
+                      name="arrow-left"
+                      size={20}
+                      color="rgba(255,255,255,0.7)"
+                    />
+                    <ThemedText style={styles.controlButtonText}>
+                      {t.session.back}
+                    </ThemedText>
                   </Pressable>
 
                   <Pressable
-                    style={[styles.controlButton, isPaused ? styles.pauseButtonActive : null]}
+                    style={[
+                      styles.controlButton,
+                      isPaused ? styles.pauseButtonActive : null,
+                    ]}
                     onPress={handlePause}
                     testID="button-pause"
                     disabled={!isSessionActive}
@@ -904,10 +717,17 @@ export default function SessionScreen() {
                     <Feather
                       name={isPaused ? "play" : "pause"}
                       size={20}
-                      color={isPaused ? StoryBuddyColors.primary : "rgba(255,255,255,0.7)"}
+                      color={
+                        isPaused
+                          ? StoryBuddyColors.primary
+                          : "rgba(255,255,255,0.7)"
+                      }
                     />
                     <ThemedText
-                      style={[styles.controlButtonText, isPaused ? { color: StoryBuddyColors.primary } : null]}
+                      style={[
+                        styles.controlButtonText,
+                        isPaused ? { color: StoryBuddyColors.primary } : null,
+                      ]}
                     >
                       {isPaused ? t.session.resume : t.session.pause}
                     </ThemedText>
@@ -921,80 +741,6 @@ export default function SessionScreen() {
     </View>
   );
 }
-
-const modalStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: Spacing.xl,
-  },
-  content: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.xl,
-    width: "100%",
-    maxWidth: 340,
-    alignItems: "center",
-  },
-  iconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: "rgba(255, 107, 157, 0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: Spacing.lg,
-  },
-  title: {
-    ...Typography.h3,
-    color: StoryBuddyColors.textPrimary,
-    textAlign: "center",
-    marginBottom: Spacing.sm,
-  },
-  subtitle: {
-    ...Typography.body,
-    color: StoryBuddyColors.textSecondary,
-    textAlign: "center",
-    marginBottom: Spacing.xl,
-  },
-  features: {
-    alignSelf: "stretch",
-    marginBottom: Spacing.xl,
-  },
-  featureRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-    paddingVertical: Spacing.xs,
-  },
-  featureText: {
-    ...Typography.body,
-    color: StoryBuddyColors.textPrimary,
-  },
-  button: {
-    backgroundColor: StoryBuddyColors.primary,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing["3xl"],
-    borderRadius: BorderRadius.xl,
-    width: "100%",
-    alignItems: "center",
-    marginBottom: Spacing.md,
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 16,
-  },
-  dismissButton: {
-    padding: Spacing.sm,
-  },
-  dismissText: {
-    ...Typography.body,
-    color: StoryBuddyColors.textSecondary,
-  },
-});
 
 const styles = StyleSheet.create({
   container: {
@@ -1104,8 +850,10 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   portalBackButton: {
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: Spacing.sm,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.lg,
@@ -1148,85 +896,7 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.8)",
     textAlign: "center",
   },
-  countdownBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    paddingVertical: 8,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.full,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-  },
-  countdownBadgeWarning: {
-    backgroundColor: "rgba(255, 107, 107, 0.25)",
-    borderColor: "rgba(255, 107, 107, 0.5)",
-  },
-  countdownText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.8)",
-  },
-  countdownTextWarning: {
-    color: StoryBuddyColors.error,
-  },
   talkButtonContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  talkButtonOuter: {
-    alignItems: "center",
-  },
-  talkButtonWrapper: {
-    width: 220,
-    height: 220,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  holdHintContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-  },
-  holdHintText: {
-    fontSize: 13,
-    color: "rgba(255,255,255,0.7)",
-    fontWeight: "500",
-  },
-  holdHintTextActive: {
-    color: "#FF3366",
-    fontWeight: "600",
-  },
-  pulseRing: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: StoryBuddyColors.primary,
-  },
-  talkButton: {
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    overflow: "hidden",
-    shadowColor: StoryBuddyColors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 12,
-  },
-  talkButtonGradient: {
-    flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },

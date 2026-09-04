@@ -16,7 +16,7 @@ import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 
 import { ThemedText } from "@/components/ThemedText";
-import { Spacing, BorderRadius, StoryBuddyColors, Typography } from "@/constants/theme";
+import { Spacing, BorderRadius, StoryBuddyColors } from "@/constants/theme";
 import type { RootStackParamList } from "@/navigation/RootStackNavigator";
 import type { ConversationMessage } from "@/context/ProgressContext";
 
@@ -34,18 +34,25 @@ function ChatBubble({
   return (
     <Animated.View
       entering={FadeInDown.delay(index * 80).springify()}
-      style={[styles.bubbleRow, isAI ? styles.bubbleRowAI : styles.bubbleRowUser]}
+      style={[
+        styles.bubbleRow,
+        isAI ? styles.bubbleRowAI : styles.bubbleRowUser,
+      ]}
     >
       {isAI && (
-        <Image source={storyImage} style={styles.bubbleAvatar} resizeMode="cover" />
+        <Image
+          source={storyImage}
+          style={styles.bubbleAvatar}
+          resizeMode="cover"
+        />
       )}
-      <View
-        style={[
-          styles.bubble,
-          isAI ? styles.bubbleAI : styles.bubbleUser,
-        ]}
-      >
-        <Text style={[styles.bubbleText, isAI ? styles.bubbleTextAI : styles.bubbleTextUser]}>
+      <View style={[styles.bubble, isAI ? styles.bubbleAI : styles.bubbleUser]}>
+        <Text
+          style={[
+            styles.bubbleText,
+            isAI ? styles.bubbleTextAI : styles.bubbleTextUser,
+          ]}
+        >
           {message.text}
         </Text>
       </View>
@@ -74,16 +81,26 @@ export default function ConversationReviewScreen() {
     >
       <View style={[styles.header, { paddingTop: insets.top + Spacing.lg }]}>
         <Animated.View entering={FadeInUp.springify()}>
-          <ThemedText style={styles.headerTitle}>Review your conversation</ThemedText>
+          <ThemedText style={styles.headerTitle}>
+            Review your conversation
+          </ThemedText>
           <ThemedText style={styles.headerSubtitle}>{story.title}</ThemedText>
         </Animated.View>
       </View>
 
       {transcript.length === 0 ? (
         <View style={styles.emptyState}>
-          <Feather name="message-circle" size={48} color="rgba(255,255,255,0.3)" />
-          <ThemedText style={styles.emptyText}>No conversation to review.</ThemedText>
-          <ThemedText style={styles.emptySubtext}>Try starting a story and chatting!</ThemedText>
+          <Feather
+            name="message-circle"
+            size={48}
+            color="rgba(255,255,255,0.3)"
+          />
+          <ThemedText style={styles.emptyText}>
+            No conversation to review.
+          </ThemedText>
+          <ThemedText style={styles.emptySubtext}>
+            Try starting a story and chatting!
+          </ThemedText>
         </View>
       ) : (
         <ScrollView
@@ -105,7 +122,12 @@ export default function ConversationReviewScreen() {
         </ScrollView>
       )}
 
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + Spacing.lg }]}>
+      <View
+        style={[
+          styles.bottomBar,
+          { paddingBottom: insets.bottom + Spacing.lg },
+        ]}
+      >
         <Pressable onPress={handleContinue} style={styles.continueButton}>
           <LinearGradient
             colors={[StoryBuddyColors.primary, "#FF8FB3"]}

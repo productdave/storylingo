@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const baseURL = "http://127.0.0.1:4173";
+const playwrightPort = process.env.PLAYWRIGHT_PORT || "4173";
+const baseURL = `http://127.0.0.1:${playwrightPort}`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -22,11 +23,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npx expo start --web --port 4173",
+    command: `npx expo start --web --port ${playwrightPort}`,
     env: {
       ...process.env,
       CI: "1",
-      EXPO_PUBLIC_DOMAIN: "localhost:5000",
+      EXPO_PUBLIC_DOMAIN: "127.0.0.1:5000",
     },
     url: baseURL,
     reuseExistingServer: !process.env.CI,

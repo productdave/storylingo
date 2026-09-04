@@ -1,10 +1,11 @@
 # StoryLingo
 
-A voice-first immersive language learning app for children ages 3-5. Children learn new languages through interactive storytelling where the AI speaks entirely in the target language.
+A voice-first language learning app. Story Adventures remain designed for ages 3-5; the Think & Guess reasoning pilot is designed for ages 4-7.
 
 ## Overview
 
-StoryLingo uses OpenAI's Realtime API (GA version) to create immersive, voice-based language learning experiences through storytelling. Children select a story and a target language, then engage in a voice conversation with the AI storyteller who:
+StoryLingo uses OpenAI's Realtime API (GA version) for browser speech transport. Children choose a target language and either enter an interactive story or play the server-authoritative Think & Guess game.
+
 - Speaks ONLY in the target language (immersive learning approach)
 - Uses simple vocabulary and short sentences appropriate for ages 3-5
 - Repeats key words naturally to reinforce learning
@@ -27,7 +28,7 @@ StoryLingo uses OpenAI's Realtime API (GA version) to create immersive, voice-ba
 │   │   └── stories.ts     # Story IDs and image mappings
 │   ├── context/
 │   │   ├── LanguageContext.tsx     # Global language state with AsyncStorage persistence
-│   │   └── SubscriptionContext.tsx # Subscription/trial management
+│   │   └── ProgressContext.tsx     # Story progress and conversation history
 │   ├── locales/           # Translation files (JSON)
 │   │   ├── en.json        # English translations + story content
 │   │   ├── zh.json        # Chinese translations + story content
@@ -42,13 +43,15 @@ StoryLingo uses OpenAI's Realtime API (GA version) to create immersive, voice-ba
 
 ## Key Features
 
-1. **Home Screen**: Welcome page with animated mascot and Start button
+1. **Home Screen**: Learning-mode hub for Story Adventures and Think & Guess
 2. **Story Selection**: Story cards with watercolor illustrations + language toggle
-3. **Session Screen**: 
+3. **Session Screen**:
    - Large Talk button (hold to speak)
    - Status indicator (Connecting/Listening/Speaking)
    - Back, Pause/Resume, and Mute controls
 4. **Vocabulary Practice (Coming Soon)**: AI-generated keywords from stories that kids can tap and practice
+5. **Think & Guess — I Guess**: 30 localized objects, bounded yes/no facts, progressive clues, and derived local difficulty adaptation
+6. **AI Guesses (Coming Soon)**: Disabled navigation card establishing the future mode
 
 ## API Endpoints
 
@@ -56,11 +59,15 @@ StoryLingo uses OpenAI's Realtime API (GA version) to create immersive, voice-ba
   - Request body: `{ storyId, storyTitle, storyContext, macroBeats, language, isInteractive }`
   - Response: `{ client_secret, expires_at }`
   - Uses the GA endpoint: `https://api.openai.com/v1/realtime/client_secrets`
+- `POST /api/think-guess/rounds` - Starts an in-memory, TTL-bounded I Guess round without revealing its answer
+- `POST /api/think-guess/rounds/:roundId/turns` - Classifies speech and applies the deterministic game reducer
+- `POST /api/think-guess/rounds/:roundId/stop` - Stops a round
+- `POST /api/think-guess/rounds/:roundId/realtime-token` - Creates a game-specific ephemeral voice credential
 
 ## Environment Variables
 
 - `OPENAI_API_KEY` - Required for OpenAI Realtime API access
-- `EXPO_PUBLIC_DOMAIN` - API host used by the web client (for example, `localhost:5000` during local development)
+- `EXPO_PUBLIC_DOMAIN` - API host used by the web client (for example, `127.0.0.1:5000` during local development)
 
 ## Running the App
 
@@ -78,6 +85,7 @@ The app uses OpenAI's GA (General Availability) Realtime API:
 3. **Session Configuration**: Includes storyteller instructions, voice settings, and turn detection
 
 Key configuration:
+
 - Model: `gpt-realtime`
 - Voice: `alloy`
 - Turn detection: Server VAD with 500ms silence threshold
@@ -101,41 +109,42 @@ Key configuration:
 The app supports multiple languages with a scalable architecture:
 
 ### Client-Side
+
 - **LanguageContext**: Global state provider wraps entire app
   - Language preference persists in AsyncStorage (key: `@storylingo_language`)
   - Provides `useTranslation()` hook for components
   - Includes `t()` function for nested key access (e.g., `t('stories.snow-white.title')`)
   - Includes `getStory(storyId)` for full story object with localized content
 
-### Translation Files (client/locales/*.json)
+### Translation Files (client/locales/\*.json)
+
 Each language file contains:
+
 - UI strings (chooseYourStory, session.connecting, vocabularyPractice, etc.)
 - Story content (title, description, context, macroBeats per story)
 - Voice agent messages (initiationMessage, pauseMessage, resumeMessage)
 
 ### Server-Side (server/languageConfig.ts)
+
 - Language-specific prompt IDs with immersive learning instructions for ages 3-5
 - Voice settings per language (alloy for all languages currently)
 - Emphasis on simple vocabulary, repetition, and encouragement to practice
 
 ### Adding a New Language
+
 1. Create new JSON file in `client/locales/` (copy from en.json)
 2. Add language config in `server/languageConfig.ts`
 3. Add language option to toggle UI in `StorySelectionScreen.tsx`
 
 ### Current Languages
+
 - English (en) - Default
 - Chinese (zh) - Simplified Mandarin
 - Spanish (es)
 
-## Subscription Model
+## Access Model
 
-The app includes a freemium subscription model:
-- **Free Trial**: 3-day trial with 15-minute daily listening limit
-- **Extended Trial**: 30 days free when subscribing (unlimited listening)
-- **Subscriptions**: $9.99/month or $99/year
-
-Developer tools are hidden behind a password (3268) - tap "StoryLingo v1.0.0" in Settings to access.
+All available stories can be opened without a trial, listening limit, subscription, or payment flow.
 
 ## Recent Changes
 

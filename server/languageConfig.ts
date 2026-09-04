@@ -7,13 +7,13 @@ export interface LanguageConfig {
   languageName: string;
 }
 
-const DEFAULT_PROMPT_ID = "pmpt_696e819d09748196a4517a7b3e42c4560613f6be24ce5faa";
+const DEFAULT_PROMPT_ID = "pmpt_69a90d800bd48194b453b5797a6145350421cafc908bc7e5";
 
 export const languageConfigs: Record<SupportedLanguage, LanguageConfig> = {
   en: {
     promptId: DEFAULT_PROMPT_ID,
     voice: "alloy",
-    languageInstruction: `IMPORTANT: This is an IMMERSIVE LANGUAGE LEARNING experience for children ages 3-5. 
+    languageInstruction: `IMPORTANT: This is an IMMERSIVE LANGUAGE LEARNING experience for children ages 3-10.
 Speak ONLY in English for this entire session - no translations or explanations in other languages.
 Use very simple vocabulary and short sentences appropriate for toddlers.
 Repeat key words naturally to help children learn them.
@@ -24,7 +24,7 @@ Use lots of expression, sound effects, and encourage children to repeat words an
   zh: {
     promptId: DEFAULT_PROMPT_ID,
     voice: "alloy",
-    languageInstruction: `IMPORTANT: This is an IMMERSIVE LANGUAGE LEARNING experience for children ages 3-5.
+    languageInstruction: `IMPORTANT: This is an IMMERSIVE LANGUAGE LEARNING experience for children ages 3-10.
 Speak ONLY in Chinese (Mandarin) for this entire session - no translations or explanations in other languages.
 Use very simple vocabulary and short sentences appropriate for toddlers.
 Repeat key words naturally to help children learn them.
@@ -35,7 +35,7 @@ Use lots of expression, sound effects, and encourage children to repeat words an
   es: {
     promptId: DEFAULT_PROMPT_ID,
     voice: "alloy",
-    languageInstruction: `IMPORTANT: This is an IMMERSIVE LANGUAGE LEARNING experience for children ages 3-5.
+    languageInstruction: `IMPORTANT: This is an IMMERSIVE LANGUAGE LEARNING experience for children ages 3-10.
 Speak ONLY in Spanish for this entire session - no translations or explanations in other languages.
 Use very simple vocabulary and short sentences appropriate for toddlers.
 Repeat key words naturally to help children learn them.

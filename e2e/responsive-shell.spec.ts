@@ -21,7 +21,11 @@ async function shellStyles(locator: Locator): Promise<ShellStyles> {
 async function openApp(page: Page) {
   await page.goto("/");
   await expect(page.getByTestId("app-shell")).toBeVisible();
+  await expect(page.getByTestId("home-adventure-map")).toBeVisible();
+  await expect(page.getByTestId("home-logo")).toBeVisible();
+  await expect(page.getByText("Four worlds. Endless stories.")).toHaveCount(0);
   await expect(page.getByTestId("button-start")).toBeVisible();
+  await expect(page.getByText(/^Build:/)).toHaveCount(0);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -96,6 +100,46 @@ test("desktop centers StoryLingo in a contained mobile shell", async ({
     expect(card.right).toBeLessThanOrEqual((box?.x ?? 0) + (box?.width ?? 0));
     expect(card.width).toBeLessThan(box?.width ?? Number.POSITIVE_INFINITY);
   }
+});
+
+test("legacy expired-trial data no longer blocks story access", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      "@storytale_subscription",
+      JSON.stringify({
+        status: "none",
+        freeTrialEndDate: "2020-01-01T00:00:00.000Z",
+      }),
+    );
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openApp(page);
+
+  await page.getByTestId("button-start").click();
+  await page.getByTestId("card-story-peter-pan").click();
+
+  await expect(page.getByTestId("button-talk")).toBeVisible();
+  await expect(page.getByText(/trial|subscribe|payment/i)).toHaveCount(0);
+});
+
+test("settings no longer exposes payment or subscription controls", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openApp(page);
+
+  await page.getByTestId("button-start").click();
+  await page.getByTestId("button-settings").click();
+
+  await expect(
+    page.getByText("Terms of Service", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Privacy Policy", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(/trial|subscription|premium|restore purchases|payment/i),
+  ).toHaveCount(0);
 });
 
 test("crossing the desktop breakpoint toggles the shell immediately", async ({
