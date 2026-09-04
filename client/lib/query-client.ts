@@ -4,18 +4,41 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
  * Gets the base URL for the Express API server (e.g., "http://localhost:3000")
  * @returns {string} The API base URL
  */
-export function getApiUrl(): string {
-  let host = process.env.EXPO_PUBLIC_DOMAIN;
-
-  if (!host) {
-    throw new Error("EXPO_PUBLIC_DOMAIN is not set");
+export function resolveApiUrl({
+  configuredDomain,
+  nodeEnv,
+  browserOrigin,
+}: {
+  configuredDomain?: string;
+  nodeEnv?: string;
+  browserOrigin?: string;
+}): string {
+  if (configuredDomain) {
+    const isLocalhost =
+      configuredDomain.startsWith("localhost") ||
+      configuredDomain.startsWith("127.0.0.1");
+    const protocol = isLocalhost ? "http" : "https";
+    return new URL(`${protocol}://${configuredDomain}`).href;
   }
 
-  const isLocalhost = host.startsWith("localhost") || host.startsWith("127.0.0.1");
-  const protocol = isLocalhost ? "http" : "https";
-  let url = new URL(`${protocol}://${host}`);
+  if (nodeEnv !== "production") {
+    return "http://127.0.0.1:5000/";
+  }
 
-  return url.href;
+  if (browserOrigin && browserOrigin !== "null") {
+    return new URL("/", browserOrigin).href;
+  }
+
+  throw new Error("StoryLingo API domain is unavailable");
+}
+
+export function getApiUrl(): string {
+  return resolveApiUrl({
+    configuredDomain: process.env.EXPO_PUBLIC_DOMAIN,
+    nodeEnv: process.env.NODE_ENV,
+    browserOrigin:
+      typeof window !== "undefined" ? window.location.origin : undefined,
+  });
 }
 
 async function throwIfResNotOk(res: Response) {
@@ -33,12 +56,21 @@ export async function apiRequest(
   const baseUrl = getApiUrl();
   const url = new URL(route, baseUrl);
 
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method,
+      headers: data ? { "Content-Type": "application/json" } : {},
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+    });
+  } catch {
+    throw new Error(
+      process.env.NODE_ENV !== "production"
+        ? "Cannot reach the local StoryLingo server. Run npm run dev, then try again."
+        : "StoryLingo could not reach the game server. Check your connection and try again.",
+    );
+  }
 
   await throwIfResNotOk(res);
   return res;

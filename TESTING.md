@@ -4,7 +4,7 @@
 
 ## Framework
 
-StoryLingo uses Playwright Test with Chromium for browser-level responsive layout and user-flow coverage. The repository tracks the Playwright version in `package.json` and `package-lock.json`.
+StoryLingo uses Node's test runner for deterministic engine/API/content tests and Playwright Test with Chromium for browser-level responsive layout and user-flow coverage. The repository tracks the browser version in `package.json` and `package-lock.json`.
 
 Install the matching browser after dependencies are installed:
 
@@ -19,15 +19,15 @@ npx playwright install chromium
 npm test
 ```
 
-Use `npm run test:e2e:headed` when a visible browser helps diagnose a failure. Playwright starts the Expo web server automatically on port 4173.
+Use `npm run test:unit` or `npm run test:e2e` to run one layer. Use `npm run test:e2e:headed` when a visible browser helps diagnose a failure. Playwright starts the Expo web server automatically on port 4173.
 
 GitHub Actions runs the Chromium suite for every pull request and every push to `main`. If a CI run fails, it keeps the Playwright HTML report, traces, screenshots, and videos as the `playwright-report` artifact for seven days.
 
 ## Test layers
 
-- Browser tests live in `e2e/`. Current coverage verifies the full-width mobile layout, the contained desktop shell, story-card containment, navigation to story selection, and live switching across the 768px breakpoint.
-- Integration tests should cover flows spanning screens or browser/runtime boundaries.
-- Unit tests should be added for extracted pure logic when browser coverage would be unnecessarily slow or indirect.
+- Engine and API tests live in `server/thinkGuess/*.test.ts`. They cover content validation, multilingual intent handling, deterministic transitions, concurrency, expiration, credential isolation, and secret non-disclosure.
+- Pure client adaptation tests live in `client/lib/*.test.ts`.
+- Browser tests live in `e2e/`. They cover the existing story path plus Think & Guess mode selection, hints, solving, replay, exit, microphone denial, expired-round recovery, and mobile/desktop containment.
 - Smoke tests belong in the browser suite when their purpose is to prove the app loads and a critical path remains reachable.
 
 ## Conventions

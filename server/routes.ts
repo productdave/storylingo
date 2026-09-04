@@ -3,6 +3,7 @@ import { createServer, type Server } from "node:http";
 import { getLanguageConfig } from "./languageConfig";
 import * as fs from "fs";
 import * as path from "path";
+import { registerThinkGuessRoutes } from "./thinkGuess/routes";
 
 const INTERACTIVE_STORY_CONTEXT = `This is an interactive choose-your-own-adventure story. Unlike pre-written tales, YOU will create a unique story based entirely on the child's choices.
 
@@ -26,16 +27,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // GET /cover - Serve the cover image page
   app.get("/cover", (req, res) => {
-    const templatePath = path.resolve(process.cwd(), "server", "templates", "cover-image.html");
+    const templatePath = path.resolve(
+      process.cwd(),
+      "server",
+      "templates",
+      "cover-image.html",
+    );
     const html = fs.readFileSync(templatePath, "utf-8");
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(html);
   });
 
+  registerThinkGuessRoutes(app);
+
   // POST /api/token - Create an ephemeral client secret for OpenAI Realtime API (GA version)
   app.post("/api/token", async (req, res) => {
     try {
-      const { storyId, storyTitle, storyContext, macroBeats, language, isInteractive } = req.body;
+      const {
+        storyId,
+        storyTitle,
+        storyContext,
+        macroBeats,
+        language,
+        isInteractive,
+      } = req.body;
 
       if (!storyId || !storyTitle || !macroBeats) {
         return res.status(400).json({ error: "Missing story information" });
@@ -52,7 +67,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add language instruction and special context for interactive stories
       let enhancedContext = langConfig.languageInstruction;
       if (isInteractive) {
-        enhancedContext += `\n\n${INTERACTIVE_STORY_CONTEXT}\n\n${storyContext || 'An open-ended adventure where the child creates their own story.'}`;
+        enhancedContext += `\n\n${INTERACTIVE_STORY_CONTEXT}\n\n${storyContext || "An open-ended adventure where the child creates their own story."}`;
       } else {
         enhancedContext += `\n\n${storyContext || `A classic tale of ${storyTitle}`}`;
       }
@@ -80,18 +95,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           body: JSON.stringify({
             session: {
               type: "realtime",
-              model: "gpt-realtime",
+              model: "gpt-realtime-2",
               prompt: {
                 id: langConfig.promptId,
                 variables: {
                   story_title: { type: "input_text", text: storyTitle },
                   story_context: { type: "input_text", text: enhancedContext },
-                  story_beats: { type: "input_text", text: storyBeatsFormatted },
+                  story_beats: {
+                    type: "input_text",
+                    text: storyBeatsFormatted,
+                  },
                 },
               },
             },
           }),
-        }
+        },
       );
 
       if (!response.ok) {

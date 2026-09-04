@@ -90,7 +90,9 @@ function setupRequestLogging(app: express.Application) {
       const duration = Date.now() - start;
 
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
+      if (capturedJsonResponse && path.includes("token")) {
+        logLine += " :: [credential redacted]";
+      } else if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
 
@@ -135,13 +137,13 @@ function serveExpoManifest(platform: string, req: Request, res: Response) {
   res.setHeader("content-type", "application/json");
 
   const manifestContent = fs.readFileSync(manifestPath, "utf-8");
-  
+
   const forwardedProto = req.header("x-forwarded-proto");
   const protocol = forwardedProto || req.protocol || "https";
   const forwardedHost = req.header("x-forwarded-host");
   const host = forwardedHost || req.get("host");
   const currentBaseUrl = `${protocol}://${host}`;
-  
+
   const urlPattern = /https?:\/\/[^/\s"]+/g;
   const rewrittenManifest = manifestContent.replace(urlPattern, (match) => {
     try {
@@ -151,7 +153,7 @@ function serveExpoManifest(platform: string, req: Request, res: Response) {
       return match;
     }
   });
-  
+
   res.send(rewrittenManifest);
 }
 
@@ -288,7 +290,8 @@ function setupErrorHandler(app: express.Application) {
   }
 
   const port = parseInt(process.env.PORT || "5000", 10);
-  server.listen(port, "0.0.0.0", () => {
+  const host = process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1";
+  server.listen(port, host, () => {
     log(`express server serving on port ${port}`);
   });
 })();

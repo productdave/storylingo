@@ -6,13 +6,13 @@
 
 **Help children build speaking confidence through stories they can talk to.**
 
-A browser-first language-learning prototype where young children speak with AI fairy-tale characters and help shape the adventure in real time.
+A browser-first language-learning prototype where young children speak with AI fairy-tale characters, shape adventures, and solve playful reasoning mysteries.
 
 </div>
 
 ## What it does
 
-StoryLingo turns language practice into play. A child chooses a target language and story, listens to an AI storyteller, then speaks to the character to answer questions, make choices, and move the adventure forward.
+StoryLingo turns language practice into play. Children can choose a Story Adventure or play Think & Guess, a guided question game where the server keeps a mystery answer and the child reasons toward it in the target language.
 
 The experience uses short, expressive exchanges designed to give young learners more opportunities to listen and speak in the language they are practising.
 
@@ -21,6 +21,7 @@ The experience uses short, expressive exchanges designed to give young learners 
 - **Real-time voice conversations** with an AI storyteller
 - **Three language modes:** English, Mandarin Chinese, and Spanish
 - **Four playable experiences:** Your Adventure, Snow White, Rapunzel, and Peter Pan
+- **Think & Guess pilot:** 30 localized mysteries with an AI-led reasoning conversation, progressive clues, and child-safe recovery
 - **Interactive storytelling** that responds to the child's choices while following each tale's main story beats
 - **Child-friendly push-to-talk controls** with pause and resume
 - **Conversation review** showing both sides of the exchange after a session
@@ -29,12 +30,11 @@ The experience uses short, expressive exchanges designed to give young learners 
 
 ## How to use
 
-1. Select **Start**.
+1. Choose **Story Adventures** or **Think & Guess** on Home.
 2. Choose English, Chinese, or Spanish.
-3. Pick a story.
-4. Select **Start Story** and allow microphone access.
-5. Hold the microphone button while speaking, then release it for the storyteller to respond.
-6. Pause when needed or leave the story to review the conversation.
+3. For a story, select a tale and start the voice session. For Think & Guess, select **I Guess**.
+4. Allow microphone access, hold the microphone button while speaking, then release it.
+5. Ask yes/no questions, request a clue, or guess the mystery object.
 
 Try the hosted app at [storylingo-production.up.railway.app](https://storylingo-production.up.railway.app/), or follow the local setup below.
 
@@ -55,35 +55,36 @@ cd storylingo
 npm install
 ```
 
-The prototype references a saved OpenAI prompt in `server/languageConfig.ts`. Make sure `DEFAULT_PROMPT_ID` is available to your OpenAI project, or replace it with your own saved Realtime prompt ID.
-
-Start the API server:
+Create a local environment file. The non-voice game works without a key; add the key to test microphone conversations:
 
 ```bash
-OPENAI_API_KEY=sk-your-openai-api-key npm run server:dev
+cp .env.example .env
+# Edit .env and add OPENAI_API_KEY if you want to test voice.
 ```
 
-In a second terminal, start the Expo web client:
+Start the API and web client together:
 
 ```bash
-EXPO_PUBLIC_DOMAIN=localhost:5000 npx expo start --web
+npm run dev
 ```
 
 Open [http://localhost:8081](http://localhost:8081).
+
+The prototype references a saved OpenAI prompt in `server/languageConfig.ts` for Story Adventures. Think & Guess has a separate prompt and never shares the StoryTale context. Its response writer uses the repository prompt with `gpt-4.1-mini` by default; an optional saved Chat/Responses prompt can be configured as documented in [`docs/think-guess-openai-platform-prompt.md`](docs/think-guess-openai-platform-prompt.md). Realtime is used separately for voice delivery. Without an OpenAI key, the game falls back to localized deterministic replies so it remains playable.
 
 Run the Playwright browser suite with `npm test`. See [TESTING.md](TESTING.md) for browser setup, current coverage, and test conventions.
 
 ## Tech stack
 
-| Layer | Technology |
-|---|---|
-| Client | React 19, TypeScript, Expo 54, React Native for Web |
-| Interface | React Navigation, Reanimated, Expo Haptics, Expo Linear Gradient |
-| Voice | OpenAI Realtime API, WebRTC, `gpt-realtime`, `gpt-4o-mini-transcribe` |
-| Backend | Express 5, TypeScript |
-| Local data | AsyncStorage |
-| Testing | Playwright Test with Chromium, GitHub Actions |
-| Build and deployment | Expo export, esbuild, Railway configuration |
+| Layer                | Technology                                                              |
+| -------------------- | ----------------------------------------------------------------------- |
+| Client               | React 19, TypeScript, Expo 54, React Native for Web                     |
+| Interface            | React Navigation, Reanimated, Expo Haptics, Expo Linear Gradient        |
+| Voice                | OpenAI Realtime API, WebRTC, `gpt-realtime-2`, `gpt-4o-mini-transcribe` |
+| Backend              | Express 5, TypeScript                                                   |
+| Local data           | AsyncStorage (preferences and derived progress only)                    |
+| Testing              | Node test runner, Playwright Test with Chromium, GitHub Actions         |
+| Build and deployment | Expo export, esbuild, Railway configuration                             |
 
 For more detail, see the [design guidelines](design_guidelines.md) and [implementation notes](replit.md).
 
@@ -91,4 +92,4 @@ For more detail, see the [design guidelines](design_guidelines.md) and [implemen
 
 StoryLingo is a working, browser-first product prototype. The hosted app runs on Railway, and the repository can also be run locally.
 
-Voice conversation is not implemented for native Expo builds. The subscription and paywall screens demonstrate the intended product flow but are not connected to live billing or purchase restoration. User state remains on the local device. The automated Playwright suite currently covers the responsive app shell, story-card containment, navigation to story selection, and breakpoint switching.
+Voice conversation is not implemented for native Expo builds. Stories and the I Guess pilot are available without a trial, listening limit, subscription, or payment flow. User language and derived progress state remain on the local device; Think & Guess does not persist audio or transcripts. Pilot rounds use TTL-bounded in-memory server storage and may be lost when the server restarts. AI Guesses is represented in navigation as a disabled future mode.

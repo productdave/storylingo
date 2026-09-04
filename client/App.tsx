@@ -18,7 +18,6 @@ import { queryClient } from "@/lib/query-client";
 import RootStackNavigator from "@/navigation/RootStackNavigator";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LanguageProvider } from "@/context/LanguageContext";
-import { SubscriptionProvider } from "@/context/SubscriptionContext";
 import { ProgressProvider } from "@/context/ProgressContext";
 
 SplashScreen.preventAutoHideAsync();
@@ -45,34 +44,29 @@ export default function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <LanguageProvider>
-          <SubscriptionProvider>
-            <ProgressProvider>
-              <SafeAreaProvider>
-                <View
-                  testID="app-viewport"
-                  style={[
-                    styles.viewport,
-                    useDesktopShell && styles.desktopViewport,
-                  ]}
+          <ProgressProvider>
+            <SafeAreaProvider>
+              <View
+                testID="app-viewport"
+                style={[
+                  styles.viewport,
+                  useDesktopShell && styles.desktopViewport,
+                ]}
+              >
+                <GestureHandlerRootView
+                  testID="app-shell"
+                  style={[styles.root, useDesktopShell && styles.desktopShell]}
                 >
-                  <GestureHandlerRootView
-                    testID="app-shell"
-                    style={[
-                      styles.root,
-                      useDesktopShell && styles.desktopShell,
-                    ]}
-                  >
-                    <KeyboardProvider>
-                      <NavigationContainer>
-                        <RootStackNavigator />
-                      </NavigationContainer>
-                      <StatusBar style="dark" />
-                    </KeyboardProvider>
-                  </GestureHandlerRootView>
-                </View>
-              </SafeAreaProvider>
-            </ProgressProvider>
-          </SubscriptionProvider>
+                  <KeyboardProvider>
+                    <NavigationContainer>
+                      <RootStackNavigator />
+                    </NavigationContainer>
+                    <StatusBar style="dark" />
+                  </KeyboardProvider>
+                </GestureHandlerRootView>
+              </View>
+            </SafeAreaProvider>
+          </ProgressProvider>
         </LanguageProvider>
       </QueryClientProvider>
     </ErrorBoundary>
